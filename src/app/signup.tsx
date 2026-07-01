@@ -2,12 +2,13 @@ import { useRouter } from 'expo-router';
 import { StyleSheet, TouchableOpacity, View, TextInput, KeyboardAvoidingView, Platform, ScrollView, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Spacing, MaxContentWidth } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
+import { useDebounce } from '@/hooks/use-debounce';
 import { supabase } from '@/lib/supabase';
 
 export default function SignUpScreen() {
@@ -17,10 +18,50 @@ export default function SignUpScreen() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [isUsernameAvailable, setIsUsernameAvailable] = useState<boolean | null>(null);
+  const [isCheckingUsername, setIsCheckingUsername] = useState(false);
+
+  const debouncedUsername = useDebounce(username, 500);
+
+  useEffect(() => {
+    async function checkUsername() {
+      if (debouncedUsername.length < 3) {
+        setIsUsernameAvailable(null);
+        return;
+      }
+
+      setIsCheckingUsername(true);
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('username')
+          .eq('username', debouncedUsername.toLowerCase())
+          .maybeSingle();
+
+        if (error) throw error;
+        setIsUsernameAvailable(!data);
+      } catch (error) {
+        console.error('Error checking username:', error);
+      } finally {
+        setIsCheckingUsername(false);
+      }
+    }
+
+    checkUsername();
+  }, [debouncedUsername]);
 
   const handleSignUp = async () => {
     if (!email || !username || !password) {
       Alert.alert('Error', 'Please fill in all fields');
+      return;
+    }
+
+    if (isUsernameAvailable === false) {
+      Alert.alert('Error', 'Username is already taken');
+      return;
+    }
+
+    if (isCheckingUsername) {
       return;
     }
 
@@ -84,13 +125,30 @@ export default function SignUpScreen() {
               <View style={styles.inputContainer}>
                 <ThemedText style={styles.label}>Username</ThemedText>
                 <TextInput
-                  style={[styles.input, { backgroundColor: theme.backgroundElement, color: theme.text }]}
+                  style={[
+                    styles.input,
+                    { backgroundColor: theme.backgroundElement, color: theme.text },
+                    isUsernameAvailable === false && { borderColor: '#ff4444', borderWidth: 1 }
+                  ]}
                   placeholder="Choose a username"
                   placeholderTextColor={theme.textSecondary}
                   value={username}
                   onChangeText={setUsername}
                   autoCapitalize="none"
                 />
+                {isCheckingUsername && (
+                  <ThemedText style={styles.statusText}>Checking availability...</ThemedText>
+                )}
+                {!isCheckingUsername && isUsernameAvailable === true && (
+                  <ThemedText style={[styles.statusText, { color: '#4CAF50' }]}>
+                    Username is available!
+                  </ThemedText>
+                )}
+                {!isCheckingUsername && isUsernameAvailable === false && (
+                  <ThemedText style={[styles.statusText, { color: '#ff4444' }]}>
+                    Username is already taken
+                  </ThemedText>
+                )}
               </View>
 
               <View style={styles.inputContainer}>
@@ -182,6 +240,11 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     paddingHorizontal: Spacing.four,
     fontSize: 16,
+  },
+  statusText: {
+    fontSize: 12,
+    marginLeft: Spacing.one,
+    marginTop: -Spacing.one,
   },
   button: {
     height: 56,
