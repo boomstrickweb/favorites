@@ -1,6 +1,13 @@
 {
   "trailingSlash": false,
   "rewrites": [
-    { "source": "/(.*)", "destination": "/index.html" }
+    {
+      "source": "/.well-known/atproto-did",
+      "destination": "/well-known/atproto-did"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
   ]
 }
