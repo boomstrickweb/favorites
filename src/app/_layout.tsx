@@ -10,13 +10,14 @@ import * as Notifications from 'expo-notifications';
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
 import { Colors } from '@/constants/theme';
 import { ThemedText } from '@/components/themed-text';
+import { useTheme } from '@/hooks/use-theme';
 
 import Constants, { ExecutionEnvironment } from 'expo-constants';
 
 const isExpoGo = Constants.executionEnvironment === ExecutionEnvironment.StoreClient;
 
 export default function RootLayout() {
-  const colorScheme = useColorScheme();
+  const themeColors = useTheme();
   const router = useRouter();
 
   useEffect(() => {
@@ -89,17 +90,17 @@ export default function RootLayout() {
     };
   }, []);
   
-  const theme = colorScheme === 'dark' ? {
+  const theme = themeColors.isDark ? {
     ...DarkTheme,
     colors: {
       ...DarkTheme.colors,
-      background: Colors.dark.background,
+      background: themeColors.background,
     },
   } : {
     ...DefaultTheme,
     colors: {
       ...DefaultTheme.colors,
-      background: Colors.light.background,
+      background: themeColors.background,
     },
   };
 
@@ -107,7 +108,7 @@ export default function RootLayout() {
     <SafeAreaProvider>
       <ThemeProvider value={theme}>
         <AnimatedSplashOverlay />
-        <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: Colors[colorScheme === 'dark' ? 'dark' : 'light'].background } }}>
+        <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: themeColors.background } }}>
           <Stack.Screen name="index" />
           <Stack.Screen name="settings" />
           <Stack.Screen name="signup" />

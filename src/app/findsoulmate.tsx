@@ -9,6 +9,7 @@ import { ThemedView } from '@/components/themed-view';
 import { useTheme } from '@/hooks/use-theme';
 import { findSoulmates } from '@/lib/api';
 import { Spacing, MaxContentWidth } from '@/constants/theme';
+import { BADGES } from './selectbadge';
 
 const CATEGORIES = [
   { id: 'all', label: 'All Categories', table: undefined },
@@ -80,37 +81,51 @@ export default function FindSoulmateScreen() {
     );
   };
 
-  const renderItem = ({ item }: { item: { user: any; matchPercentage: number } }) => (
-    <TouchableOpacity 
-      style={[styles.userCard, { backgroundColor: theme.backgroundElement }]}
-      onPress={() => router.push({
-        pathname: '/compare',
-        params: { userId: item.user.id, userName: item.user.full_name || item.user.username }
-      })}
-    >
-      <View style={styles.userInfo}>
-        <View style={[styles.avatar, { backgroundColor: theme.backgroundSelected }]}>
-          {item.user.avatar_url ? (
-            <Image source={{ uri: item.user.avatar_url }} style={styles.avatarImage} />
-          ) : (
-            <Ionicons name="person" size={24} color={theme.textSecondary} />
-          )}
+  const renderItem = ({ item }: { item: { user: any; matchPercentage: number } }) => {
+    const badge = item.user.profile_badge ? BADGES.find(b => b.id === item.user.profile_badge) : null;
+    
+    return (
+      <TouchableOpacity 
+        style={[styles.userCard, { backgroundColor: theme.backgroundElement }]}
+        onPress={() => router.push({
+          pathname: '/compare',
+          params: { userId: item.user.id, userName: item.user.full_name || item.user.username }
+        })}
+      >
+        <View style={styles.userInfo}>
+          <View style={[styles.avatar, { backgroundColor: theme.backgroundSelected }]}>
+            {item.user.avatar_url ? (
+              <Image source={{ uri: item.user.avatar_url }} style={styles.avatarImage} />
+            ) : (
+              <Ionicons name="person" size={24} color={theme.textSecondary} />
+            )}
+          </View>
+          <View style={styles.userDetails}>
+            <View style={styles.usernameRow}>
+              <ThemedText type="defaultSemiBold">{item.user.full_name || item.user.username}</ThemedText>
+              {badge && (
+                <Ionicons 
+                  name={badge.icon as any} 
+                  size={14} 
+                  color={badge.color} 
+                  style={styles.badgeIcon} 
+                />
+              )}
+            </View>
+            <ThemedText style={styles.username}>@{item.user.username}</ThemedText>
+          </View>
         </View>
-        <View style={styles.userDetails}>
-          <ThemedText type="defaultSemiBold">{item.user.full_name || item.user.username}</ThemedText>
-          <ThemedText style={styles.username}>@{item.user.username}</ThemedText>
+        <View style={styles.badgeRow}>
+          <View style={[styles.percentageBadge, { backgroundColor: theme.brand }]}>
+            <ThemedText style={styles.percentageText}>
+              {String(isNaN(item.matchPercentage) ? 0 : item.matchPercentage)}%
+            </ThemedText>
+          </View>
+          <Ionicons name="swap-horizontal" size={20} color={theme.brand} />
         </View>
-      </View>
-      <View style={styles.badgeRow}>
-        <View style={[styles.percentageBadge, { backgroundColor: theme.brand }]}>
-          <ThemedText style={styles.percentageText}>
-            {String(isNaN(item.matchPercentage) ? 0 : item.matchPercentage)}%
-          </ThemedText>
-        </View>
-        <Ionicons name="swap-horizontal" size={20} color={theme.brand} />
-      </View>
-    </TouchableOpacity>
-  );
+      </TouchableOpacity>
+    );
+  };
 
   return (
     <ThemedView style={styles.container}>
@@ -288,6 +303,13 @@ const styles = StyleSheet.create({
   },
   userDetails: {
     flex: 1,
+  },
+  usernameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  badgeIcon: {
+    marginLeft: 4,
   },
   username: {
     fontSize: 12,

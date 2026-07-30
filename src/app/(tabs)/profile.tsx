@@ -1,8 +1,9 @@
-import { useState, useCallback, useRef } from 'react';
-import { StyleSheet, TouchableOpacity, View, ScrollView, Alert, Image, ActivityIndicator, Platform, Modal, TextInput } from 'react-native';
+import { useState, useCallback, useEffect } from 'react';
+import { StyleSheet, TouchableOpacity, View, ScrollView, Alert, Image, ActivityIndicator, Platform } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as ImagePicker from 'expo-image-picker';
 
 import { ThemedText } from '@/components/themed-text';
@@ -10,6 +11,7 @@ import { ThemedView } from '@/components/themed-view';
 import { useTheme } from '@/hooks/use-theme';
 import { supabase } from '@/lib/supabase';
 import { Spacing, MaxContentWidth } from '@/constants/theme';
+import { BADGES, BADGE_STORAGE_KEY } from '../selectbadge';
 
 interface UserProfile {
   id: string;
@@ -32,6 +34,39 @@ export default function ProfileScreen() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [selectedBadge, setSelectedBadge] = useState<typeof BADGES[0] | null>(null);
+
+  const fetchBadge = useCallback(async () => {
+    try {
+      // Try DB first
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('profile_badge')
+          .eq('id', user.id)
+          .single();
+        
+        if (data?.profile_badge) {
+          const badge = BADGES.find(b => b.id === data.profile_badge);
+          if (badge) {
+            setSelectedBadge(badge);
+            return;
+          }
+        }
+      }
+
+      const badgeId = await AsyncStorage.getItem(BADGE_STORAGE_KEY);
+      if (badgeId) {
+        const badge = BADGES.find(b => b.id === badgeId);
+        setSelectedBadge(badge || null);
+      } else {
+        setSelectedBadge(null);
+      }
+    } catch (error) {
+      console.error('Error fetching badge:', error);
+    }
+  }, []);
 
   const fetchProfile = useCallback(async () => {
     try {
@@ -80,8 +115,9 @@ export default function ProfileScreen() {
   useFocusEffect(
     useCallback(() => {
       fetchProfile();
+      fetchBadge();
       // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [fetchProfile])
+    }, [fetchProfile, fetchBadge])
   );
 
   const handleSignOut = async () => {
@@ -144,7 +180,17 @@ export default function ProfileScreen() {
                   <Ionicons name="person" size={40} color={theme.textSecondary} />
                 )}</View>
               <View style={styles.nameContainer}>
-                <ThemedText type="defaultSemiBold" style={styles.username} numberOfLines={1}>{profile?.full_name || profile?.username}</ThemedText>
+                <View style={styles.usernameRow}>
+                  <ThemedText type="defaultSemiBold" style={styles.username} numberOfLines={1}>{profile?.full_name || profile?.username}</ThemedText>
+                  {selectedBadge && (
+                    <Ionicons 
+                      name={selectedBadge.icon as any} 
+                      size={20} 
+                      color={selectedBadge.color} 
+                      style={styles.badgeIcon} 
+                    />
+                  )}
+                </View>
                 {profile?.full_name ? <ThemedText style={styles.handle} numberOfLines={1}>@{profile.username}</ThemedText> : null}
               </View>
             </View>
@@ -379,10 +425,18 @@ const styles = StyleSheet.create({
   nameContainer: {
     flex: 1,
   },
+  usernameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.one,
+  },
   username: {
     fontSize: 20,
     fontWeight: '800',
     marginBottom: 2,
+  },
+  badgeIcon: {
+    marginLeft: 4,
   },
   handle: {
     fontSize: 14,

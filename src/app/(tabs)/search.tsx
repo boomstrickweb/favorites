@@ -10,6 +10,7 @@ import { searchMovies, searchMusic, searchBooks, searchSports, searchDishes, sea
 import { useTheme } from '@/hooks/use-theme';
 import { supabase } from '@/lib/supabase';
 import { Spacing } from '@/constants/theme';
+import { BADGES } from '../selectbadge';
 
 type Category = 'movies' | 'music' | 'books' | 'sports' | 'food' | 'places' | 'vehicles' | 'games' | 'users';
 type VehicleFilter = 'passenger car' | 'bus' | 'mpv' | 'truck' | 'motorcycle' | 'lsv';
@@ -1258,6 +1259,7 @@ export default function SearchScreen() {
 
     // Some images (like flags from country search) might not have a scheme on some platforms
     const imageUri = item.image;
+    const badge = item.type === 'user' && item.details?.profile_badge ? BADGES.find(b => b.id === item.details.profile_badge) : null;
 
     return (
       <View style={styles.resultItemContainer}>
@@ -1277,7 +1279,17 @@ export default function SearchScreen() {
           )}
           <View style={styles.itemInfo}>
             <View style={styles.titleRow}>
-              <ThemedText type="defaultSemiBold" numberOfLines={1} style={styles.titleText}>{item.title}</ThemedText>
+              <View style={styles.usernameRow}>
+                <ThemedText type="defaultSemiBold" numberOfLines={1} style={styles.titleText}>{item.title}</ThemedText>
+                {badge && (
+                  <Ionicons 
+                    name={badge.icon as any} 
+                    size={14} 
+                    color={badge.color} 
+                    style={styles.badgeIcon} 
+                  />
+                )}
+              </View>
               <View style={styles.sourceBadge}>
                 <ThemedText style={styles.sourceText}>{item.source}</ThemedText>
               </View>
@@ -3441,6 +3453,15 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+  },
+  usernameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    marginRight: 8,
+  },
+  badgeIcon: {
+    marginLeft: 4,
   },
   titleText: {
     flex: 1,

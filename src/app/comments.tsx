@@ -1,13 +1,15 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { StyleSheet, View, FlatList, TouchableOpacity, ActivityIndicator, TextInput, KeyboardAvoidingView, Platform, Alert, Image, Pressable } from 'react-native';
+import { StyleSheet, View, FlatList, TouchableOpacity, ActivityIndicator, TextInput, KeyboardAvoidingView, Platform, Alert, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useTheme } from '@/hooks/use-theme';
 import { supabase } from '@/lib/supabase';
 import { Spacing } from '@/constants/theme';
+import { BADGES, BADGE_STORAGE_KEY } from './selectbadge';
 
 interface Comment {
   id: string;
@@ -19,6 +21,7 @@ interface Comment {
   profiles: {
     username: string;
     avatar_url: string | null;
+    profile_badge?: string | null;
   };
   comment_likes?: { count: number }[];
   replies?: Comment[];
@@ -36,7 +39,41 @@ export default function CommentsScreen() {
   const [replyingTo, setReplyingTo] = useState<Comment | null>(null);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [postOwnerId, setPostOwnerId] = useState<string | null>(null);
+  const [userBadge, setUserBadge] = useState<typeof BADGES[0] | null>(null);
   const inputRef = useRef<TextInput>(null);
+
+  useEffect(() => {
+    const loadUserBadge = async () => {
+      try {
+        // Try DB first
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const { data, error } = await supabase
+            .from('profiles')
+            .select('profile_badge')
+            .eq('id', user.id)
+            .single();
+          
+          if (data?.profile_badge) {
+            const badge = BADGES.find(b => b.id === data.profile_badge);
+            if (badge) {
+              setUserBadge(badge);
+              return;
+            }
+          }
+        }
+
+        const badgeId = await AsyncStorage.getItem(BADGE_STORAGE_KEY);
+        if (badgeId) {
+          const badge = BADGES.find(b => b.id === badgeId);
+          setUserBadge(badge || null);
+        }
+      } catch (error) {
+        console.error('Error loading user badge:', error);
+      }
+    };
+    loadUserBadge();
+  }, []);
 
   const fetchComments = useCallback(async () => {
     try {
@@ -59,7 +96,7 @@ export default function CommentsScreen() {
         .from('comments')
         .select(`
           *,
-          profiles:user_id (username, avatar_url),
+          profiles:user_id (username, avatar_url, profile_badge),
           comment_likes(count)
         `)
         .eq('post_id', postId)
@@ -225,16 +262,85 @@ export default function CommentsScreen() {
     inputRef.current?.focus();
   };
 
-  const renderComment = ({ item }: { item: Comment }) => (
-    <View style={styles.commentContainer}>
-      <View style={styles.commentRow}>
-        <Image 
-          source={{ uri: item.profiles.avatar_url || 'https://via.placeholder.com/40' }} 
-          style={styles.avatar} 
-        />
-        <View style={styles.commentContent}>
-          <ThemedText style={styles.username}>{item.profiles.username}</ThemedText>
-          <ThemedText style={styles.text}>{item.content}</ThemedText>
+  const renderReplies = (replies: Comment[]) => {
+    return replies.map(reply => {
+      const replyBadge = reply.profiles.profile_badge ? BADGES.find(b => b.id === reply.profiles.profile_badge) : null;
+      
+      return (
+        <View key={reply.id} style={styles.commentRow}>
+           <Image 
+            source={{ uri: reply.profiles.avatar_url || 'https://via.placeholder.com/32' }} 
+            style={[styles.avatar, styles.replyAvatar]} 
+          />
+          <View style={styles.commentContent}>
+            <View style={styles.usernameRow}>
+              <ThemedText style={styles.username}>{reply.profiles.username}</ThemedText>
+              {replyBadge && (
+                <Ionicons 
+                  name={replyBadge.icon as any} 
+                  size={12} 
+                  color={replyBadge.color} 
+                  style={styles.badgeIcon} 
+                />
+              )}
+            </View>
+            <ThemedText style={styles.text}>{reply.content}</ThemedText>
+            <View style={styles.commentActions}>
+              <ThemedText style={styles.timeAgo}>
+                {new Date(reply.created_at).toLocaleDateString()}
+              </ThemedText>
+              {(reply.user_id === currentUserId || postOwnerId === currentUserId) && (
+                <TouchableOpacity 
+                  onPress={() => handleDelete(reply.id)}
+                  style={{ paddingHorizontal: Spacing.two }}
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                >
+                  <ThemedText style={[styles.actionText, { color: theme.brand }]}>Delete</ThemedText>
+                </TouchableOpacity>
+              )}
+            </View>
+          </View>
+          <TouchableOpacity 
+            style={styles.likeButton}
+            onPress={() => handleLike(reply.id, !!reply.is_liked)}
+          >
+            <Ionicons 
+              name={reply.is_liked ? "heart" : "heart-outline"} 
+              size={16} 
+              color={reply.is_liked ? theme.brand : theme.textSecondary} 
+            />
+            <ThemedText style={styles.likeCount}>
+              {reply.comment_likes?.[0]?.count || 0}
+            </ThemedText>
+          </TouchableOpacity>
+        </View>
+      );
+    });
+  };
+
+  const renderComment = ({ item }: { item: Comment }) => {
+    const itemBadge = item.profiles.profile_badge ? BADGES.find(b => b.id === item.profiles.profile_badge) : null;
+    
+    return (
+      <View style={styles.commentContainer}>
+        <View style={styles.commentRow}>
+          <Image 
+            source={{ uri: item.profiles.avatar_url || 'https://via.placeholder.com/40' }} 
+            style={styles.avatar} 
+          />
+          <View style={styles.commentContent}>
+            <View style={styles.usernameRow}>
+              <ThemedText style={styles.username}>{item.profiles.username}</ThemedText>
+              {itemBadge && (
+                <Ionicons 
+                  name={itemBadge.icon as any} 
+                  size={14} 
+                  color={itemBadge.color} 
+                  style={styles.badgeIcon} 
+                />
+              )}
+            </View>
+            <ThemedText style={styles.text}>{item.content}</ThemedText>
           <View style={styles.commentActions}>
             <ThemedText style={styles.timeAgo}>
               {new Date(item.created_at).toLocaleDateString()}
@@ -270,49 +376,12 @@ export default function CommentsScreen() {
 
       {item.replies && item.replies.length > 0 && (
         <View style={styles.repliesList}>
-          {item.replies.map(reply => (
-            <View key={reply.id} style={styles.commentRow}>
-               <Image 
-                source={{ uri: reply.profiles.avatar_url || 'https://via.placeholder.com/32' }} 
-                style={[styles.avatar, styles.replyAvatar]} 
-              />
-              <View style={styles.commentContent}>
-                <ThemedText style={styles.username}>{reply.profiles.username}</ThemedText>
-                <ThemedText style={styles.text}>{reply.content}</ThemedText>
-                <View style={styles.commentActions}>
-                  <ThemedText style={styles.timeAgo}>
-                    {new Date(reply.created_at).toLocaleDateString()}
-                  </ThemedText>
-                  {(reply.user_id === currentUserId || postOwnerId === currentUserId) && (
-                    <TouchableOpacity 
-                      onPress={() => handleDelete(reply.id)}
-                      style={{ paddingHorizontal: Spacing.two }}
-                      hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                    >
-                      <ThemedText style={[styles.actionText, { color: theme.brand }]}>Delete</ThemedText>
-                    </TouchableOpacity>
-                  )}
-                </View>
-              </View>
-              <TouchableOpacity 
-                style={styles.likeButton}
-                onPress={() => handleLike(reply.id, !!reply.is_liked)}
-              >
-                <Ionicons 
-                  name={reply.is_liked ? "heart" : "heart-outline"} 
-                  size={16} 
-                  color={reply.is_liked ? theme.brand : theme.textSecondary} 
-                />
-                <ThemedText style={styles.likeCount}>
-                  {reply.comment_likes?.[0]?.count || 0}
-                </ThemedText>
-              </TouchableOpacity>
-            </View>
-          ))}
+          {renderReplies(item.replies)}
         </View>
       )}
     </View>
   );
+};
 
   return (
     <ThemedView style={styles.container}>
@@ -424,9 +493,17 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingTop: 2,
   },
+  usernameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
   username: {
     fontWeight: 'bold',
     fontSize: 14,
+    marginBottom: 2,
+  },
+  badgeIcon: {
     marginBottom: 2,
   },
   text: {

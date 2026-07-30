@@ -9,6 +9,7 @@ import { ThemedView } from '@/components/themed-view';
 import { useTheme } from '@/hooks/use-theme';
 import { supabase } from '@/lib/supabase';
 import { Spacing } from '@/constants/theme';
+import { BADGES } from '../selectbadge';
 
 interface Notification {
   id: string;
@@ -21,6 +22,7 @@ interface Notification {
   actor: {
     username: string;
     avatar_url: string | null;
+    profile_badge?: string | null;
   };
   posts?: {
     catalog_type: string;
@@ -54,7 +56,7 @@ export default function NotificationsScreen() {
         .from('notifications')
         .select(`
           *,
-          actor:profiles!actor_id (username, avatar_url),
+          actor:profiles!actor_id (username, avatar_url, profile_badge),
           posts:post_id (catalog_type, metadata)
         `)
         .eq('user_id', user.id)
@@ -158,25 +160,43 @@ export default function NotificationsScreen() {
     const postTitle = notification.posts?.metadata?.value;
     const postType = notification.posts?.catalog_type || 'post';
     const postDescription = postTitle ? `"${postTitle}" (${postType})` : postType;
+    const badge = notification.actor?.profile_badge ? BADGES.find(b => b.id === notification.actor.profile_badge) : null;
     
+    const actorNameComponent = (
+      <View style={styles.usernameRow}>
+        <ThemedText style={{ fontWeight: 'bold' }}>{actorName}</ThemedText>
+        {badge && (
+          <Ionicons 
+            name={badge.icon as any} 
+            size={12} 
+            color={badge.color} 
+            style={styles.badgeIcon} 
+          />
+        )}
+      </View>
+    );
+
     switch (notification.type) {
       case 'follow':
         return (
-          <ThemedText>
-            <ThemedText style={{ fontWeight: 'bold' }}>{actorName}</ThemedText> followed you
-          </ThemedText>
+          <View style={styles.notificationTextRow}>
+            {actorNameComponent}
+            <ThemedText> followed you</ThemedText>
+          </View>
         );
       case 'like':
         return (
-          <ThemedText>
-            <ThemedText style={{ fontWeight: 'bold' }}>{actorName}</ThemedText> liked your {postDescription}
-          </ThemedText>
+          <View style={styles.notificationTextRow}>
+            {actorNameComponent}
+            <ThemedText> liked your {postDescription}</ThemedText>
+          </View>
         );
       case 'comment':
         return (
-          <ThemedText>
-            <ThemedText style={{ fontWeight: 'bold' }}>{actorName}</ThemedText> commented on your {postDescription}
-          </ThemedText>
+          <View style={styles.notificationTextRow}>
+            {actorNameComponent}
+            <ThemedText> commented on your {postDescription}</ThemedText>
+          </View>
         );
       default:
         return null;
@@ -335,7 +355,18 @@ const styles = StyleSheet.create({
   },
   notificationContent: {
     flex: 1,
-    justifyContent: 'center',
+  },
+  notificationTextRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+  },
+  usernameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  badgeIcon: {
+    marginLeft: 4,
   },
   timeText: {
     fontSize: 12,

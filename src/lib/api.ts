@@ -29,7 +29,7 @@ export async function searchUsers(query: string): Promise<SearchResult[]> {
 
     let queryBuilder = supabase
       .from('profiles')
-      .select('id, username, full_name, avatar_url')
+      .select('id, username, full_name, avatar_url, profile_badge')
       .or(`username.ilike.%${query}%,full_name.ilike.%${query}%`);
 
     if (currentUser) {
@@ -61,6 +61,7 @@ export async function searchUsers(query: string): Promise<SearchResult[]> {
       image: item.avatar_url || undefined,
       type: 'user' as const,
       source: 'User',
+      details: { profile_badge: item.profile_badge }
     }));
   } catch (error) {
     console.error('Error searching users:', error);
@@ -734,7 +735,7 @@ export async function findSoulmates(minPercentage: number = 50, categoryTable?: 
     // Fetch all other users
     const { data: profiles, error: profileError } = await supabase
       .from('profiles')
-      .select('id, username, full_name, avatar_url')
+      .select('id, username, full_name, avatar_url, profile_badge')
       .neq('id', currentUser.id);
 
     if (profileError) throw profileError;

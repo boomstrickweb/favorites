@@ -9,12 +9,14 @@ import { ThemedView } from '@/components/themed-view';
 import { useTheme } from '@/hooks/use-theme';
 import { supabase } from '@/lib/supabase';
 import { Spacing, MaxContentWidth } from '@/constants/theme';
+import { BADGES } from './selectbadge';
 
 interface UserProfile {
   id: string;
   username: string;
   full_name?: string;
   avatar_url?: string;
+  profile_badge?: string | null;
   isFollowing?: boolean;
   isFollower?: boolean;
 }
@@ -91,7 +93,8 @@ export default function FollowingScreen() {
             id,
             username,
             full_name,
-            avatar_url
+            avatar_url,
+            profile_badge
           )
         `)
         .eq('follower_id', userId);
@@ -231,54 +234,68 @@ export default function FollowingScreen() {
     fetchFollowing();
   }, [fetchFollowing]);
 
-  const renderUserItem = ({ item }: { item: UserProfile }) => (
-    <View style={[styles.userCard, { backgroundColor: theme.backgroundElement }]}>
-      <TouchableOpacity 
-        style={styles.userCardInfo}
-        onPress={() => router.push(`/user/${item.id}`)}
-      >
-        <View style={[styles.avatar, { backgroundColor: theme.backgroundSelected }]}>
-          {item.avatar_url ? (
-            <Image source={{ uri: item.avatar_url }} style={styles.avatarImage} />
-          ) : (
-            <Ionicons name="person" size={24} color={theme.textSecondary} />
-          )}
-        </View>
-        <View style={styles.userInfo}>
-          <ThemedText type="defaultSemiBold">{item.full_name || item.username}</ThemedText>
-          {item.full_name ? (
-            <ThemedText style={styles.username}>@{item.username}</ThemedText>
-          ) : null}
-        </View>
-      </TouchableOpacity>
-
-      {currentUser && currentUser.id !== item.id && (
-        <TouchableOpacity
-          style={[
-            styles.followButton,
-            item.isFollowing ? styles.followingButton : { backgroundColor: theme.brand }
-          ]}
-          onPress={() => item.isFollowing ? handleUnfollow(item) : handleFollow(item)}
-          disabled={actionLoading === item.id}
+  const renderUserItem = ({ item }: { item: UserProfile }) => {
+    const badge = item.profile_badge ? BADGES.find(b => b.id === item.profile_badge) : null;
+    
+    return (
+      <View style={[styles.userCard, { backgroundColor: theme.backgroundElement }]}>
+        <TouchableOpacity 
+          style={styles.userCardInfo}
+          onPress={() => router.push(`/user/${item.id}`)}
         >
-          {actionLoading === item.id ? (
-            <ActivityIndicator size="small" color={item.isFollowing ? theme.text : "#FFFFFF"} />
-          ) : (
-            <ThemedText style={[
-              styles.followButtonText,
-              item.isFollowing ? { color: theme.text } : { color: "#FFFFFF" }
-            ]}>
-              {item.isFollowing ? 'Following' : (item.isFollower ? 'Follow Back' : 'Follow')}
-            </ThemedText>
-          )}
+          <View style={[styles.avatar, { backgroundColor: theme.backgroundSelected }]}>
+            {item.avatar_url ? (
+              <Image source={{ uri: item.avatar_url }} style={styles.avatarImage} />
+            ) : (
+              <Ionicons name="person" size={24} color={theme.textSecondary} />
+            )}
+          </View>
+          <View style={styles.userInfo}>
+            <View style={styles.usernameRow}>
+              <ThemedText type="defaultSemiBold">{item.full_name || item.username}</ThemedText>
+              {badge && (
+                <Ionicons 
+                  name={badge.icon as any} 
+                  size={14} 
+                  color={badge.color} 
+                  style={styles.badgeIcon} 
+                />
+              )}
+            </View>
+            {item.full_name ? (
+              <ThemedText style={styles.username}>@{item.username}</ThemedText>
+            ) : null}
+          </View>
         </TouchableOpacity>
-      )}
-      
-      <TouchableOpacity onPress={() => router.push(`/user/${item.id}`)} style={styles.chevron}>
-        <Ionicons name="chevron-forward" size={20} color={theme.textSecondary} />
-      </TouchableOpacity>
-    </View>
-  );
+
+        {currentUser && currentUser.id !== item.id && (
+          <TouchableOpacity
+            style={[
+              styles.followButton,
+              item.isFollowing ? styles.followingButton : { backgroundColor: theme.brand }
+            ]}
+            onPress={() => item.isFollowing ? handleUnfollow(item) : handleFollow(item)}
+            disabled={actionLoading === item.id}
+          >
+            {actionLoading === item.id ? (
+              <ActivityIndicator size="small" color={item.isFollowing ? theme.text : "#FFFFFF"} />
+            ) : (
+              <ThemedText style={[
+                styles.followButtonText,
+                item.isFollowing ? { color: theme.text } : { color: "#FFFFFF" }
+              ]}>
+                {item.isFollowing ? 'Following' : (item.isFollower ? 'Follow Back' : 'Follow')}
+              </ThemedText>
+            )}
+          </TouchableOpacity>
+        )}
+        
+        <TouchableOpacity onPress={() => router.push(`/user/${item.id}`)} style={styles.chevron}>
+          <Ionicons name="chevron-forward" size={20} color={theme.textSecondary} />
+        </TouchableOpacity>
+      </View>
+    );
+  };
 
   return (
     <ThemedView style={styles.container}>
@@ -391,6 +408,13 @@ const styles = StyleSheet.create({
   },
   userInfo: {
     flex: 1,
+  },
+  usernameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  badgeIcon: {
+    marginLeft: 4,
   },
   username: {
     fontSize: 13,

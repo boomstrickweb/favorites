@@ -17,6 +17,7 @@ export default function SettingsScreen() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState<string | null>(null);
+  const [isPremium, setIsPremium] = useState(false);
 
   // Privacy States
   const [whoSeeFollowers, setWhoSeeFollowers] = useState<PrivacyOption>('Everyone');
@@ -33,7 +34,7 @@ export default function SettingsScreen() {
 
       const { data, error } = await supabase
         .from('profiles')
-        .select('privacy_followers, privacy_collections, privacy_likes, privacy_messages')
+        .select('privacy_followers, privacy_collections, privacy_likes, privacy_messages, is_premium')
         .eq('id', user.id)
         .single();
 
@@ -44,6 +45,7 @@ export default function SettingsScreen() {
         setWhoSeeCollections(data.privacy_collections as PrivacyOption || 'Everyone');
         setWhoSeeLikes(data.privacy_likes as PrivacyOption || 'Your Followers');
         setWhoCanMessage(data.privacy_messages as PrivacyOption || 'Everyone');
+        setIsPremium(!!data.is_premium);
       }
 
       // Fetch blocked count
@@ -98,6 +100,14 @@ export default function SettingsScreen() {
     } else {
       router.replace('/(tabs)');
     }
+  };
+
+  const handlePremium = () => {
+    router.push('/premium');
+  };
+
+  const handlePremiumPrivileges = () => {
+    router.push('/premiumprivileges');
   };
 
   const handleTwoFactorSetup = () => {
@@ -222,6 +232,21 @@ export default function SettingsScreen() {
 
         <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
           
+          <SettingSection title="Premium">
+            <SettingItem 
+              icon="star-outline" 
+              label="Premium" 
+              onPress={handlePremium} 
+            />
+            {isPremium && (
+              <SettingItem 
+                icon="ribbon-outline" 
+                label="Premium Privileges" 
+                onPress={handlePremiumPrivileges} 
+              />
+            )}
+          </SettingSection>
+
           <SettingSection title="Account preferences, password and security">
             <SettingItem 
               icon="key-outline" 

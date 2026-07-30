@@ -9,6 +9,7 @@ import { ThemedView } from '@/components/themed-view';
 import { useTheme } from '@/hooks/use-theme';
 import { supabase } from '@/lib/supabase';
 import { Spacing, MaxContentWidth } from '@/constants/theme';
+import { BADGES } from '../selectbadge';
 
 interface UserProfile {
   id: string;
@@ -28,6 +29,9 @@ interface UserProfile {
   privacy_collections?: string;
   privacy_likes?: string;
   privacy_messages?: string;
+  is_premium?: boolean;
+  stalk_mode?: boolean;
+  profile_badge?: string | null;
 }
 
 export default function UserProfileScreen() {
@@ -43,6 +47,10 @@ export default function UserProfileScreen() {
   const [followLoading, setFollowLoading] = useState(false);
   const [blockLoading, setBlockLoading] = useState(false);
   const [currentUser, setCurrentUser] = useState<any>(null);
+  const [isCurrentUserPremium, setIsCurrentUserPremium] = useState(false);
+  const [hasNotificationsEnabled, setHasNotificationsEnabled] = useState(false);
+  const [notificationLoading, setNotificationLoading] = useState(false);
+  const [viewRecorded, setViewRecorded] = useState(false);
 
   const checkBlockStatus = useCallback(async (targetId: string, currentUserId: string) => {
     try {
@@ -69,6 +77,22 @@ export default function UserProfileScreen() {
       setBlockedMe(!!blockedByData);
     } catch (error) {
       console.error('Error checking block status:', error);
+    }
+  }, []);
+
+  const checkPremiumNotificationStatus = useCallback(async (targetId: string, currentUserId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('premium_notifications')
+        .select('*')
+        .eq('subscriber_id', currentUserId)
+        .eq('target_id', targetId)
+        .maybeSingle();
+
+      if (error) throw error;
+      setHasNotificationsEnabled(!!data);
+    } catch (error) {
+      console.error('Error checking premium notification status:', error);
     }
   }, []);
 
@@ -100,6 +124,37 @@ export default function UserProfileScreen() {
     }
   }, []);
 
+  const recordView = useCallback(async (targetId: string, currentUserId: string, isPremium: boolean) => {
+    if (viewRecorded || targetId === currentUserId || !isPremium) return;
+    
+    try {
+      // Fetch viewer's stalk mode status
+      const { data: viewerProfile } = await supabase
+        .from('profiles')
+        .select('stalk_mode')
+        .eq('id', currentUserId)
+        .single();
+      
+      const stalkMode = !!viewerProfile?.stalk_mode;
+
+      // Use the RPC function to record view (handles 24h limit and stalk limit)
+      const { error } = await supabase.rpc('record_profile_view', {
+        p_viewer_id: currentUserId,
+        p_viewed_id: targetId,
+        p_is_stalk_mode: stalkMode
+      });
+
+      if (error) {
+        // If it's a stalking limit error, we might want to log it or ignore
+        console.warn('Profile view record error:', error.message);
+      } else {
+        setViewRecorded(true);
+      }
+    } catch (error) {
+      console.error('Error recording profile view:', error);
+    }
+  }, [viewRecorded]);
+
   const fetchProfile = useCallback(async () => {
     if (!id) return;
     try {
@@ -107,6 +162,16 @@ export default function UserProfileScreen() {
       
       const { data: { user } } = await supabase.auth.getUser();
       setCurrentUser(user);
+
+      if (user) {
+        const { data: currentUserProfile } = await supabase
+          .from('profiles')
+          .select('is_premium')
+          .eq('id', user.id)
+          .single();
+        
+        setIsCurrentUserPremium(!!currentUserProfile?.is_premium);
+      }
 
       const { data, error } = await supabase
         .from('profiles')
@@ -120,9 +185,12 @@ export default function UserProfileScreen() {
       setProfile(data);
 
       if (user && id !== user.id) {
+        const profileIsPremium = !!data.is_premium;
         await Promise.all([
           checkFollowStatus(id as string, user.id),
-          checkBlockStatus(id as string, user.id)
+          checkBlockStatus(id as string, user.id),
+          checkPremiumNotificationStatus(id as string, user.id),
+          recordView(id as string, user.id, profileIsPremium)
         ]);
       }
     } catch (error: any) {
@@ -320,6 +388,54 @@ export default function UserProfileScreen() {
     }
   };
 
+  const handleToggleNotification = async () => {
+    if (!currentUser || !profile || !isCurrentUserPremium) return;
+
+    try {
+      setNotificationLoading(true);
+      if (hasNotificationsEnabled) {
+        // Disable
+        const { error } = await supabase
+          .from('premium_notifications')
+          .delete()
+          .eq('subscriber_id', currentUser.id)
+          .eq('target_id', profile.id);
+
+        if (error) throw error;
+        setHasNotificationsEnabled(false);
+      } else {
+        // Enable
+        const { error } = await supabase
+          .from('premium_notifications')
+          .insert({
+            subscriber_id: currentUser.id,
+            target_id: profile.id
+          });
+
+        if (error) {
+          if (error.message.includes('up to 5 profiles')) {
+             if (Platform.OS === 'web') {
+              window.alert('Limit reached: You can only enable notifications for up to 5 profiles.');
+            } else {
+              Alert.alert('Limit Reached', 'You can only enable notifications for up to 5 profiles.');
+            }
+            return;
+          }
+          throw error;
+        }
+        setHasNotificationsEnabled(true);
+      }
+    } catch (error: any) {
+      if (Platform.OS === 'web') {
+        window.alert('Error: ' + error.message);
+      } else {
+        Alert.alert('Error', error.message);
+      }
+    } finally {
+      setNotificationLoading(false);
+    }
+  };
+
   const interestIcons: Record<string, keyof typeof Ionicons.glyphMap> = {
     'Arts & Crafts': 'brush',
     'Collecting': 'archive',
@@ -359,25 +475,44 @@ export default function UserProfileScreen() {
               <Ionicons name="chevron-back" size={28} color={theme.text} />
             </TouchableOpacity>
             <ThemedText type="defaultSemiBold">Profile</ThemedText>
-            {currentUser && currentUser.id !== profile.id ? (
-              <TouchableOpacity 
-                onPress={isBlocked ? handleUnblockUser : handleBlockUser} 
-                style={styles.blockHeaderButton}
-                disabled={blockLoading}
-              >
-                {blockLoading ? (
-                  <ActivityIndicator size="small" color={isBlocked ? theme.brand : "#FF3B30"} />
-                ) : (
-                  <Ionicons 
-                    name={isBlocked ? "lock-open-outline" : "ban-outline"} 
-                    size={22} 
-                    color={isBlocked ? theme.brand : "#FF3B30"} 
-                  />
-                )}
-              </TouchableOpacity>
-            ) : (
-              <View style={{ width: 40 }} />
-            )}
+            <View style={styles.headerActions}>
+              {isCurrentUserPremium && currentUser && currentUser.id !== profile.id && !isFollowing && (
+                <TouchableOpacity 
+                  onPress={handleToggleNotification}
+                  style={styles.headerButton}
+                  disabled={notificationLoading}
+                >
+                  {notificationLoading ? (
+                    <ActivityIndicator size="small" color={theme.brand} />
+                  ) : (
+                    <Ionicons 
+                      name={hasNotificationsEnabled ? "notifications" : "notifications-outline"} 
+                      size={24} 
+                      color={hasNotificationsEnabled ? theme.brand : theme.text} 
+                    />
+                  )}
+                </TouchableOpacity>
+              )}
+              {currentUser && currentUser.id !== profile.id ? (
+                <TouchableOpacity 
+                  onPress={isBlocked ? handleUnblockUser : handleBlockUser} 
+                  style={styles.headerButton}
+                  disabled={blockLoading}
+                >
+                  {blockLoading ? (
+                    <ActivityIndicator size="small" color={isBlocked ? theme.brand : "#FF3B30"} />
+                  ) : (
+                    <Ionicons 
+                      name={isBlocked ? "lock-open-outline" : "ban-outline"} 
+                      size={22} 
+                      color={isBlocked ? theme.brand : "#FF3B30"} 
+                    />
+                  )}
+                </TouchableOpacity>
+              ) : (
+                <View style={{ width: 40 }} />
+              )}
+            </View>
           </View>
 
         <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
@@ -391,9 +526,19 @@ export default function UserProfileScreen() {
                 )}
               </View>
               <View style={styles.nameContainer}>
-                <ThemedText type="defaultSemiBold" style={styles.username}>
-                  {profile.full_name || profile.username}
-                </ThemedText>
+                <View style={styles.usernameRow}>
+                  <ThemedText type="defaultSemiBold" style={styles.username}>
+                    {profile.full_name || profile.username}
+                  </ThemedText>
+                  {profile.profile_badge && (
+                    <Ionicons 
+                      name={BADGES.find(b => b.id === profile.profile_badge)?.icon as any || 'star-outline'} 
+                      size={18} 
+                      color={BADGES.find(b => b.id === profile.profile_badge)?.color || theme.brand} 
+                      style={styles.badgeIcon} 
+                    />
+                  )}
+                </View>
                 {profile.full_name ? (
                   <ThemedText style={styles.handle}>@{profile.username}</ThemedText>
                 ) : null}
@@ -655,7 +800,11 @@ const styles = StyleSheet.create({
     padding: Spacing.one,
     marginLeft: -Spacing.one,
   },
-  blockHeaderButton: {
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  headerButton: {
     width: 40,
     height: 40,
     borderRadius: 20,
@@ -693,6 +842,13 @@ const styles = StyleSheet.create({
   },
   nameContainer: {
     flex: 1,
+  },
+  usernameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  badgeIcon: {
+    marginLeft: 6,
   },
   username: {
     fontSize: 20,

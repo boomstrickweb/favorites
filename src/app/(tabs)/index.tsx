@@ -9,6 +9,7 @@ import { ThemedView } from '@/components/themed-view';
 import { useTheme } from '@/hooks/use-theme';
 import { supabase } from '@/lib/supabase';
 import { Spacing } from '@/constants/theme';
+import { BADGES } from '../selectbadge';
 import { 
   getMovieDetails, 
   getTVShowDetails, 
@@ -40,6 +41,7 @@ interface Post {
   profiles: {
     username: string;
     avatar_url: string;
+    profile_badge?: string | null;
   };
   likes_count: number;
   comments_count: number;
@@ -85,15 +87,24 @@ export default function FeedScreen() {
       if (followingError) throw followingError;
 
       const followedUserIds = followingData?.map(f => f.following_id) || [];
-      // Always include our own posts
-      const usersToSee = [...followedUserIds, user.id];
 
-      // 2. Fetch posts only from followed users and ourselves
+      // 1.5 Get premium notification targets
+      const { data: premiumNotifData, error: premiumNotifError } = await supabase
+        .from('premium_notifications')
+        .select('target_id')
+        .eq('subscriber_id', user.id);
+      
+      const premiumNotifUserIds = premiumNotifData?.map(n => n.target_id) || [];
+
+      // Always include our own posts
+      const usersToSee = [...new Set([...followedUserIds, ...premiumNotifUserIds, user.id])];
+
+      // 2. Fetch posts only from followed users, premium notifications, and ourselves
       const { data, error } = await supabase
         .from('posts')
         .select(`
           *,
-          profiles:user_id (id, username, avatar_url),
+          profiles:user_id (id, username, avatar_url, privacy_collections, profile_badge),
           likes:likes(count),
           comments:comments(count)
         `)
@@ -102,8 +113,30 @@ export default function FeedScreen() {
 
       if (error) throw error;
 
+      // Filter by privacy
+      const filteredData = (data || []).filter(post => {
+        const postOwner = post.profiles as any;
+        if (!postOwner) return false;
+        if (postOwner.id === user.id) return true;
+        
+        const isFollowed = followedUserIds.includes(postOwner.id);
+        const privacy = postOwner.privacy_collections || 'Everyone';
+        
+        if (privacy === 'Everyone') return true;
+        if (privacy === 'Your Followers') return isFollowed;
+        
+        if (privacy === 'Followers you follow back') {
+          // Note: Full implementation of 'Followers you follow back' would require 
+          // checking if the post owner follows the current user.
+          // For now, we strictly require at least a follow from our side.
+          return isFollowed; 
+        }
+
+        return true;
+      });
+
       // Check if current user has liked each post
-      let postsWithLikes = data || [];
+      let postsWithLikes = filteredData;
       if (user) {
         const { data: userLikes } = await supabase
           .from('likes')
@@ -404,6 +437,7 @@ export default function FeedScreen() {
 
     const catalogLabel = item.catalog_type.charAt(0).toUpperCase() + item.catalog_type.slice(1);
     const typeLabel = item.metadata.type ? item.metadata.type.charAt(0).toUpperCase() + item.metadata.type.slice(1) : '';
+    const badge = item.profiles?.profile_badge ? BADGES.find(b => b.id === item.profiles.profile_badge) : null;
 
     return (
       <ThemedView style={styles.postCard}>
@@ -417,7 +451,17 @@ export default function FeedScreen() {
             )}
           </View>
           <View style={styles.headerText}>
-            <ThemedText type="defaultSemiBold">{item.profiles?.username || 'Unknown User'}</ThemedText>
+            <View style={styles.usernameRow}>
+              <ThemedText type="defaultSemiBold">{item.profiles?.username || 'Unknown User'}</ThemedText>
+              {badge && (
+                <Ionicons 
+                  name={badge.icon as any} 
+                  size={14} 
+                  color={badge.color} 
+                  style={styles.badgeIcon} 
+                />
+              )}
+            </View>
             <ThemedText style={[styles.timeText, { color: theme.textSecondary }]}>{timeAgo}</ThemedText>
           </View>
         </TouchableOpacity>
@@ -582,6 +626,13 @@ const styles = StyleSheet.create({
   },
   headerText: {
     flex: 1,
+  },
+  usernameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  badgeIcon: {
+    marginLeft: 4,
   },
   timeText: {
     fontSize: 12,

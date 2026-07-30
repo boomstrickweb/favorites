@@ -9,6 +9,7 @@ import { ThemedView } from '@/components/themed-view';
 import { useTheme } from '@/hooks/use-theme';
 import { supabase } from '@/lib/supabase';
 import { Spacing, MaxContentWidth } from '@/constants/theme';
+import { BADGES } from './selectbadge';
 
 interface BlockedUser {
   id: string;
@@ -18,6 +19,7 @@ interface BlockedUser {
     username: string;
     full_name?: string;
     avatar_url?: string;
+    profile_badge?: string | null;
   };
 }
 
@@ -43,7 +45,8 @@ export default function BlockedAccountsScreen() {
             id,
             username,
             full_name,
-            avatar_url
+            avatar_url,
+            profile_badge
           )
         `)
         .eq('blocker_id', user.id);
@@ -109,34 +112,48 @@ export default function BlockedAccountsScreen() {
     );
   };
 
-  const renderItem = ({ item }: { item: BlockedUser }) => (
-    <View style={[styles.userItem, { borderBottomColor: theme.backgroundSelected }]}>
-      <View style={styles.userInfo}>
-        <View style={[styles.avatar, { backgroundColor: theme.backgroundElement }]}>
-          {item.profiles.avatar_url ? (
-            <Image source={{ uri: item.profiles.avatar_url }} style={styles.avatarImage} />
+  const renderItem = ({ item }: { item: BlockedUser }) => {
+    const badge = item.profiles.profile_badge ? BADGES.find(b => b.id === item.profiles.profile_badge) : null;
+    
+    return (
+      <View style={[styles.userItem, { borderBottomColor: theme.backgroundSelected }]}>
+        <View style={styles.userInfo}>
+          <View style={[styles.avatar, { backgroundColor: theme.backgroundElement }]}>
+            {item.profiles.avatar_url ? (
+              <Image source={{ uri: item.profiles.avatar_url }} style={styles.avatarImage} />
+            ) : (
+              <Ionicons name="person" size={20} color={theme.textSecondary} />
+            )}
+          </View>
+          <View style={styles.userDetails}>
+            <View style={styles.usernameRow}>
+              <ThemedText type="defaultSemiBold">{item.profiles.full_name || item.profiles.username}</ThemedText>
+              {badge && (
+                <Ionicons 
+                  name={badge.icon as any} 
+                  size={14} 
+                  color={badge.color} 
+                  style={styles.badgeIcon} 
+                />
+              )}
+            </View>
+            <ThemedText style={styles.username}>@{item.profiles.username}</ThemedText>
+          </View>
+        </View>
+        <TouchableOpacity 
+          style={[styles.unblockButton, { borderColor: theme.brand }]} 
+          onPress={() => handleUnblock(item.blocked_id, item.profiles.username)}
+          disabled={unblockingId === item.blocked_id}
+        >
+          {unblockingId === item.blocked_id ? (
+            <ActivityIndicator size="small" color={theme.brand} />
           ) : (
-            <Ionicons name="person" size={20} color={theme.textSecondary} />
+            <ThemedText style={{ color: theme.brand, fontSize: 13, fontWeight: '600' }}>Unblock</ThemedText>
           )}
-        </View>
-        <View style={styles.userDetails}>
-          <ThemedText type="defaultSemiBold">{item.profiles.full_name || item.profiles.username}</ThemedText>
-          <ThemedText style={styles.username}>@{item.profiles.username}</ThemedText>
-        </View>
+        </TouchableOpacity>
       </View>
-      <TouchableOpacity 
-        style={[styles.unblockButton, { borderColor: theme.brand }]} 
-        onPress={() => handleUnblock(item.blocked_id, item.profiles.username)}
-        disabled={unblockingId === item.blocked_id}
-      >
-        {unblockingId === item.blocked_id ? (
-          <ActivityIndicator size="small" color={theme.brand} />
-        ) : (
-          <ThemedText style={[styles.unblockButtonText, { color: theme.brand }]}>Unblock</ThemedText>
-        )}
-      </TouchableOpacity>
-    </View>
-  );
+    );
+  };
 
   return (
     <ThemedView style={styles.container}>
@@ -229,6 +246,13 @@ const styles = StyleSheet.create({
   },
   userDetails: {
     flex: 1,
+  },
+  usernameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  badgeIcon: {
+    marginLeft: 4,
   },
   username: {
     fontSize: 13,
