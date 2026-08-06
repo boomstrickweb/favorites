@@ -495,6 +495,20 @@ export default function UserProfileScreen() {
               )}
               {currentUser && currentUser.id !== profile.id ? (
                 <TouchableOpacity 
+                  onPress={() => router.push({
+                    pathname: '/sendgift',
+                    params: { 
+                      userId: profile.id, 
+                      userName: profile.full_name || profile.username 
+                    }
+                  })} 
+                  style={styles.headerButton}
+                >
+                  <Ionicons name="gift-outline" size={24} color={theme.brand} />
+                </TouchableOpacity>
+              ) : null}
+              {currentUser && currentUser.id !== profile.id ? (
+                <TouchableOpacity 
                   onPress={isBlocked ? handleUnblockUser : handleBlockUser} 
                   style={styles.headerButton}
                   disabled={blockLoading}
@@ -602,7 +616,7 @@ export default function UserProfileScreen() {
           <View style={styles.statsContainer}>
             <View style={styles.statItem}>
               <ThemedText type="defaultSemiBold">0</ThemedText>
-              <ThemedText style={styles.statLabel}>Favorites</ThemedText>
+              <ThemedText style={styles.statLabel}>Gifts</ThemedText>
             </View>
             <View style={styles.statDivider} />
             <TouchableOpacity 

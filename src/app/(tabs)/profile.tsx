@@ -259,7 +259,7 @@ export default function ProfileScreen() {
           <View style={styles.statsContainer}>
             <View style={styles.statItem}>
               <ThemedText type="defaultSemiBold">0</ThemedText>
-              <ThemedText style={styles.statLabel}>Favorites</ThemedText>
+              <ThemedText style={styles.statLabel}>Gifts</ThemedText>
             </View>
             <View style={styles.statDivider} />
             <TouchableOpacity 
