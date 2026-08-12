@@ -6,6 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { UserBadge } from '@/components/user-badge';
 import { useTheme } from '@/hooks/use-theme';
 import { supabase } from '@/lib/supabase';
 import { Spacing, MaxContentWidth } from '@/constants/theme';
@@ -82,8 +83,6 @@ export default function PremiumNotificationsListScreen() {
   };
 
   const renderItem = ({ item }: { item: Profile }) => {
-    const badge = item.profile_badge ? BADGES.find(b => b.id === item.profile_badge) : null;
-    
     return (
       <TouchableOpacity 
         style={[styles.item, { backgroundColor: theme.backgroundElement }]}
@@ -100,14 +99,7 @@ export default function PremiumNotificationsListScreen() {
           <View style={styles.info}>
             <View style={styles.usernameRow}>
               <ThemedText type="defaultSemiBold">{item.full_name || item.username}</ThemedText>
-              {badge && (
-                <Ionicons 
-                  name={badge.icon as any} 
-                  size={14} 
-                  color={badge.color} 
-                  style={styles.badgeIcon} 
-                />
-              )}
+              <UserBadge badgeId={item.profile_badge} size={20} style={styles.badgeIcon} />
             </View>
             <ThemedText style={styles.handle}>@{item.username}</ThemedText>
           </View>

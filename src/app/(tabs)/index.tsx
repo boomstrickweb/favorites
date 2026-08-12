@@ -6,6 +6,7 @@ import * as Sharing from 'expo-sharing';
 import * as FileSystem from 'expo-file-system';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { UserBadge } from '@/components/user-badge';
 import { useTheme } from '@/hooks/use-theme';
 import { supabase } from '@/lib/supabase';
 import { Spacing } from '@/constants/theme';
@@ -437,7 +438,6 @@ export default function FeedScreen() {
 
     const catalogLabel = item.catalog_type.charAt(0).toUpperCase() + item.catalog_type.slice(1);
     const typeLabel = item.metadata.type ? item.metadata.type.charAt(0).toUpperCase() + item.metadata.type.slice(1) : '';
-    const badge = item.profiles?.profile_badge ? BADGES.find(b => b.id === item.profiles.profile_badge) : null;
 
     return (
       <ThemedView style={styles.postCard}>
@@ -453,14 +453,7 @@ export default function FeedScreen() {
           <View style={styles.headerText}>
             <View style={styles.usernameRow}>
               <ThemedText type="defaultSemiBold">{item.profiles?.username || 'Unknown User'}</ThemedText>
-              {badge && (
-                <Ionicons 
-                  name={badge.icon as any} 
-                  size={14} 
-                  color={badge.color} 
-                  style={styles.badgeIcon} 
-                />
-              )}
+              <UserBadge badgeId={item.profiles?.profile_badge} size={20} style={styles.badgeIcon} />
             </View>
             <ThemedText style={[styles.timeText, { color: theme.textSecondary }]}>{timeAgo}</ThemedText>
           </View>

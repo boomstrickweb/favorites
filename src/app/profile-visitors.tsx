@@ -6,6 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { UserBadge } from '@/components/user-badge';
 import { useTheme } from '@/hooks/use-theme';
 import { Spacing, MaxContentWidth } from '@/constants/theme';
 import { supabase } from '@/lib/supabase';
@@ -79,8 +80,6 @@ export default function ProfileVisitorsScreen() {
   };
 
   const renderVisitor = ({ item }: { item: Visitor }) => {
-    const badge = item.viewer.profile_badge ? BADGES.find(b => b.id === item.viewer.profile_badge) : null;
-
     return (
       <TouchableOpacity 
         style={[styles.visitorItem, { borderBottomColor: theme.backgroundElement }]}
@@ -97,14 +96,7 @@ export default function ProfileVisitorsScreen() {
           <View style={styles.textContainer}>
             <View style={styles.usernameRow}>
               <ThemedText type="defaultSemiBold">{item.viewer.full_name || item.viewer.username}</ThemedText>
-              {badge && (
-                <Ionicons 
-                  name={badge.icon as any} 
-                  size={14} 
-                  color={badge.color} 
-                  style={styles.badgeIcon} 
-                />
-              )}
+              <UserBadge badgeId={item.viewer.profile_badge} size={20} style={styles.badgeIcon} />
             </View>
             <ThemedText style={[styles.timestamp, { color: theme.textSecondary }]}>
               {formatDate(item.created_at)}

@@ -10,6 +10,9 @@ import { useTheme } from '@/hooks/use-theme';
 import { supabase } from '@/lib/supabase';
 import { Spacing, MaxContentWidth } from '@/constants/theme';
 import { BADGES } from '../selectbadge';
+import { UserBadge } from '@/components/user-badge';
+
+import { Gifts } from '@/components/Gifts';
 
 interface UserProfile {
   id: string;
@@ -51,6 +54,7 @@ export default function UserProfileScreen() {
   const [hasNotificationsEnabled, setHasNotificationsEnabled] = useState(false);
   const [notificationLoading, setNotificationLoading] = useState(false);
   const [viewRecorded, setViewRecorded] = useState(false);
+  const [giftCount, setGiftCount] = useState(0);
 
   const checkBlockStatus = useCallback(async (targetId: string, currentUserId: string) => {
     try {
@@ -183,6 +187,13 @@ export default function UserProfileScreen() {
         throw error;
       }
       setProfile(data);
+
+      // Fetch gift count
+      const { count: gCount } = await supabase
+        .from('gifts')
+        .select('*', { count: 'exact', head: true })
+        .eq('receiver_id', id);
+      setGiftCount(gCount || 0);
 
       if (user && id !== user.id) {
         const profileIsPremium = !!data.is_premium;
@@ -544,14 +555,7 @@ export default function UserProfileScreen() {
                   <ThemedText type="defaultSemiBold" style={styles.username}>
                     {profile.full_name || profile.username}
                   </ThemedText>
-                  {profile.profile_badge && (
-                    <Ionicons 
-                      name={BADGES.find(b => b.id === profile.profile_badge)?.icon as any || 'star-outline'} 
-                      size={18} 
-                      color={BADGES.find(b => b.id === profile.profile_badge)?.color || theme.brand} 
-                      style={styles.badgeIcon} 
-                    />
-                  )}
+                  <UserBadge badgeId={profile.profile_badge} size={Platform.OS === 'web' ? 32 : 28} />
                 </View>
                 {profile.full_name ? (
                   <ThemedText style={styles.handle}>@{profile.username}</ThemedText>
@@ -614,10 +618,16 @@ export default function UserProfileScreen() {
           </View>
 
           <View style={styles.statsContainer}>
-            <View style={styles.statItem}>
-              <ThemedText type="defaultSemiBold">0</ThemedText>
+            <TouchableOpacity 
+              style={styles.statItem}
+              onPress={() => router.push({ 
+                pathname: `/user/${id}/gifts`, 
+                params: { userName: profile.full_name || profile.username } 
+              })}
+            >
+              <ThemedText type="defaultSemiBold">{giftCount}</ThemedText>
               <ThemedText style={styles.statLabel}>Gifts</ThemedText>
-            </View>
+            </TouchableOpacity>
             <View style={styles.statDivider} />
             <TouchableOpacity 
               style={styles.statItem}
@@ -701,6 +711,7 @@ export default function UserProfileScreen() {
               </TouchableOpacity>
             </View>
           )}
+
 
           <View style={styles.section}>
             <ThemedText type="defaultSemiBold" style={styles.sectionTitle}>Collections</ThemedText>

@@ -20,42 +20,11 @@ import { ThemedView } from '@/components/themed-view';
 import { useTheme } from '@/hooks/use-theme';
 import { supabase } from '@/lib/supabase';
 import { Spacing, MaxContentWidth } from '@/constants/theme';
+import { GIFTS, Gift } from '@/components/Gifts';
 
 const { width } = Dimensions.get('window');
 const COLUMN_COUNT = 3;
 const ITEM_SIZE = (Math.min(width, MaxContentWidth) - Spacing.four * 2 - Spacing.three * (COLUMN_COUNT - 1)) / COLUMN_COUNT;
-
-interface Gift {
-  id: string;
-  name: string;
-  icon: keyof typeof Ionicons.glyphMap;
-  isPremium: boolean;
-  color: string;
-  animationType: 'pulse' | 'shake' | 'float';
-}
-
-const GIFTS: Gift[] = [
-  // Standard Gifts
-  { id: 'heart', name: 'Heart', icon: 'heart', isPremium: false, color: '#FF2D55', animationType: 'pulse' },
-  { id: 'thumbs-up', name: 'Thumbs Up', icon: 'thumbs-up', isPremium: false, color: '#007AFF', animationType: 'shake' },
-  { id: 'rose', name: 'Rose', icon: 'flower', isPremium: false, color: '#FF3B30', animationType: 'float' },
-  { id: 'coffee', name: 'Coffee', icon: 'cafe', isPremium: false, color: '#A2845E', animationType: 'pulse' },
-  { id: 'chocolate', name: 'Chocolate', icon: 'nutrition', isPremium: false, color: '#7B3F00', animationType: 'float' },
-  { id: 'candy', name: 'Candy', icon: 'ice-cream', isPremium: false, color: '#FF9500', animationType: 'shake' },
-  { id: 'cookie', name: 'Cookie', icon: 'disc', isPremium: false, color: '#C58C5A', animationType: 'pulse' },
-  { id: 'pizza', name: 'Pizza', icon: 'pizza', isPremium: false, color: '#FFCC00', animationType: 'float' },
-  
-  // Premium Gifts
-  { id: 'clapperboard', name: 'Clapperboard', icon: 'videocam', isPremium: true, color: '#5856D6', animationType: 'shake' },
-  { id: 'golden-book', name: 'Golden Book', icon: 'book', isPremium: true, color: '#FFD700', animationType: 'pulse' },
-  { id: 'vinyl-record', name: 'Vinyl Record', icon: 'musical-notes', isPremium: true, color: '#333333', animationType: 'float' },
-  { id: 'golden-controller', name: 'Golden Controller', icon: 'game-controller', isPremium: true, color: '#FFD700', animationType: 'shake' },
-  { id: 'car-key', name: 'Car Key', icon: 'key', isPremium: true, color: '#8E8E93', animationType: 'pulse' },
-  { id: 'golden-ball', name: 'Golden Ball', icon: 'football', isPremium: true, color: '#FFD700', animationType: 'float' },
-  { id: 'titanium-phone', name: 'Titanium Phone', icon: 'phone-portrait', isPremium: true, color: '#B4B4B4', animationType: 'pulse' },
-  { id: 'compass', name: 'Compass', icon: 'compass', isPremium: true, color: '#5AC8FA', animationType: 'shake' },
-  { id: 'chef-hat', name: 'Chef Hat', icon: 'restaurant', isPremium: true, color: '#FFFFFF', animationType: 'float' },
-];
 
 function AnimatedGiftIcon({ icon, color, type }: { icon: keyof typeof Ionicons.glyphMap, color: string, type: Gift['animationType'] }) {
   const animation = useSharedValue(0);
@@ -185,6 +154,30 @@ export default function SendGiftScreen() {
       setLoading(true);
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('User not authenticated');
+
+      // Check premium specific constraint: same gift to same user once per day
+      if (isPremium) {
+        const today = new Date().toISOString().split('T')[0];
+        const { data: alreadySent, error: checkError } = await supabase
+          .from('gifts')
+          .select('id')
+          .eq('sender_id', user.id)
+          .eq('receiver_id', userId)
+          .eq('gift_type', gift.id)
+          .gte('created_at', today)
+          .maybeSingle();
+        
+        if (checkError) console.error('Error checking gift limit:', checkError);
+
+        if (alreadySent) {
+          Alert.alert(
+            'Limit Reached',
+            `Premium users can only send the same gift to the same user once per day. You've already sent a ${gift.name} to ${userName} today.`
+          );
+          setLoading(false);
+          return;
+        }
+      }
 
       const { error } = await supabase.from('gifts').insert({
         sender_id: user.id,

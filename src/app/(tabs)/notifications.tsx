@@ -6,6 +6,7 @@ import { formatDistanceToNow } from 'date-fns';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { UserBadge } from '@/components/user-badge';
 import { useTheme } from '@/hooks/use-theme';
 import { supabase } from '@/lib/supabase';
 import { Spacing } from '@/constants/theme';
@@ -160,19 +161,11 @@ export default function NotificationsScreen() {
     const postTitle = notification.posts?.metadata?.value;
     const postType = notification.posts?.catalog_type || 'post';
     const postDescription = postTitle ? `"${postTitle}" (${postType})` : postType;
-    const badge = notification.actor?.profile_badge ? BADGES.find(b => b.id === notification.actor.profile_badge) : null;
-    
+
     const actorNameComponent = (
       <View style={styles.usernameRow}>
         <ThemedText style={{ fontWeight: 'bold' }}>{actorName}</ThemedText>
-        {badge && (
-          <Ionicons 
-            name={badge.icon as any} 
-            size={12} 
-            color={badge.color} 
-            style={styles.badgeIcon} 
-          />
-        )}
+        <UserBadge badgeId={notification.actor?.profile_badge} size={18} style={styles.badgeIcon} />
       </View>
     );
 

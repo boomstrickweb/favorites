@@ -12,6 +12,7 @@ import { useTheme } from '@/hooks/use-theme';
 import { supabase } from '@/lib/supabase';
 import { Spacing, MaxContentWidth } from '@/constants/theme';
 import { BADGES, BADGE_STORAGE_KEY } from '../selectbadge';
+import { UserBadge } from '@/components/user-badge';
 
 interface UserProfile {
   id: string;
@@ -27,6 +28,7 @@ interface UserProfile {
   interests?: string[];
   follower_count?: number;
   following_count?: number;
+  profile_badge?: string | null;
 }
 
 export default function ProfileScreen() {
@@ -34,39 +36,7 @@ export default function ProfileScreen() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [selectedBadge, setSelectedBadge] = useState<typeof BADGES[0] | null>(null);
-
-  const fetchBadge = useCallback(async () => {
-    try {
-      // Try DB first
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        const { data, error } = await supabase
-          .from('profiles')
-          .select('profile_badge')
-          .eq('id', user.id)
-          .single();
-        
-        if (data?.profile_badge) {
-          const badge = BADGES.find(b => b.id === data.profile_badge);
-          if (badge) {
-            setSelectedBadge(badge);
-            return;
-          }
-        }
-      }
-
-      const badgeId = await AsyncStorage.getItem(BADGE_STORAGE_KEY);
-      if (badgeId) {
-        const badge = BADGES.find(b => b.id === badgeId);
-        setSelectedBadge(badge || null);
-      } else {
-        setSelectedBadge(null);
-      }
-    } catch (error) {
-      console.error('Error fetching badge:', error);
-    }
-  }, []);
+  const [giftCount, setGiftCount] = useState(0);
 
   const fetchProfile = useCallback(async () => {
     try {
@@ -92,6 +62,13 @@ export default function ProfileScreen() {
         } else {
           setProfile(data);
         }
+
+        // Fetch gift count
+        const { count: gCount } = await supabase
+          .from('gifts')
+          .select('*', { count: 'exact', head: true })
+          .eq('receiver_id', user.id);
+        setGiftCount(gCount || 0);
       }
     } catch (error: any) {
       console.error('Error fetching profile:', error.message);
@@ -115,9 +92,7 @@ export default function ProfileScreen() {
   useFocusEffect(
     useCallback(() => {
       fetchProfile();
-      fetchBadge();
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [fetchProfile, fetchBadge])
+    }, [fetchProfile])
   );
 
   const handleSignOut = async () => {
@@ -182,14 +157,7 @@ export default function ProfileScreen() {
               <View style={styles.nameContainer}>
                 <View style={styles.usernameRow}>
                   <ThemedText type="defaultSemiBold" style={styles.username} numberOfLines={1}>{profile?.full_name || profile?.username}</ThemedText>
-                  {selectedBadge && (
-                    <Ionicons 
-                      name={selectedBadge.icon as any} 
-                      size={20} 
-                      color={selectedBadge.color} 
-                      style={styles.badgeIcon} 
-                    />
-                  )}
+                  <UserBadge badgeId={profile?.profile_badge} size={Platform.OS === 'web' ? 32 : 28} />
                 </View>
                 {profile?.full_name ? <ThemedText style={styles.handle} numberOfLines={1}>@{profile.username}</ThemedText> : null}
               </View>
@@ -257,10 +225,13 @@ export default function ProfileScreen() {
             ) : null}</View>
 
           <View style={styles.statsContainer}>
-            <View style={styles.statItem}>
-              <ThemedText type="defaultSemiBold">0</ThemedText>
+            <TouchableOpacity 
+              style={styles.statItem}
+              onPress={() => router.push('/profile/gifts')}
+            >
+              <ThemedText type="defaultSemiBold">{giftCount}</ThemedText>
               <ThemedText style={styles.statLabel}>Gifts</ThemedText>
-            </View>
+            </TouchableOpacity>
             <View style={styles.statDivider} />
             <TouchableOpacity 
               style={styles.statItem}

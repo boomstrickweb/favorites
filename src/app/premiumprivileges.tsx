@@ -14,6 +14,7 @@ export default function PremiumPrivilegesScreen() {
   const theme = useTheme();
   const router = useRouter();
   const [stalkMode, setStalkMode] = useState(false);
+  const [isPremium, setIsPremium] = useState(false);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
 
@@ -29,12 +30,13 @@ export default function PremiumPrivilegesScreen() {
 
       const { data, error } = await supabase
         .from('profiles')
-        .select('stalk_mode')
+        .select('stalk_mode, is_premium')
         .eq('id', user.id)
         .single();
 
       if (error) throw error;
       setStalkMode(!!data.stalk_mode);
+      setIsPremium(!!data.is_premium);
     } catch (error) {
       console.error('Error fetching stalk mode:', error);
     } finally {
@@ -85,6 +87,11 @@ export default function PremiumPrivilegesScreen() {
       icon: "color-palette-outline" as const,
       onPress: () => { router.push('/selectthemes'); },
     },
+    ...(isPremium ? [{
+      label: "Badge Marketplace",
+      icon: "cart-outline" as const,
+      onPress: () => { router.push('/badgemarketplace'); },
+    }] : []),
     {
       label: "See who's viewed your profile",
       icon: "eye-outline" as const,
@@ -113,20 +120,28 @@ export default function PremiumPrivilegesScreen() {
             <ActivityIndicator size="large" color={theme.brand} style={{ marginTop: 20 }} />
           ) : (
             <View style={[styles.sectionContent, { backgroundColor: theme.backgroundElement }]}>
-              {privileges.slice(0, 3).map((item, index) => (
-                <TouchableOpacity
-                  key={item.label}
-                  style={styles.privilegeItem}
-                  onPress={item.onPress}
-                  activeOpacity={0.7}
-                >
-                  <View style={styles.privilegeItemLeft}>
-                    <Ionicons name={item.icon} size={24} color={theme.brand} />
-                    <ThemedText style={styles.privilegeItemLabel}>{item.label}</ThemedText>
-                  </View>
-                  <Ionicons name="chevron-forward" size={20} color={theme.textSecondary} />
-                </TouchableOpacity>
-              ))}
+              {privileges.map((item, index) => {
+                if ('onPress' in item) {
+                  return (
+                    <TouchableOpacity
+                      key={item.label}
+                      style={[
+                        styles.privilegeItem,
+                        index === privileges.length - 1 && { borderBottomWidth: 0 }
+                      ]}
+                      onPress={item.onPress}
+                      activeOpacity={0.7}
+                    >
+                      <View style={styles.privilegeItemLeft}>
+                        <Ionicons name={item.icon} size={24} color={theme.brand} />
+                        <ThemedText style={styles.privilegeItemLabel}>{item.label}</ThemedText>
+                      </View>
+                      <Ionicons name="chevron-forward" size={20} color={theme.textSecondary} />
+                    </TouchableOpacity>
+                  );
+                }
+                return null;
+              })}
 
               <View style={styles.privilegeItem}>
                 <View style={styles.privilegeItemLeft}>
@@ -141,18 +156,6 @@ export default function PremiumPrivilegesScreen() {
                   thumbColor={Platform.OS === 'ios' ? '#FFFFFF' : stalkMode ? theme.brand : '#f4f3f4'}
                 />
               </View>
-
-              <TouchableOpacity
-                style={[styles.privilegeItem, { borderBottomWidth: 0 }]}
-                onPress={privileges[3].onPress}
-                activeOpacity={0.7}
-              >
-                <View style={styles.privilegeItemLeft}>
-                  <Ionicons name={privileges[3].icon} size={24} color={theme.brand} />
-                  <ThemedText style={styles.privilegeItemLabel}>{privileges[3].label}</ThemedText>
-                </View>
-                <Ionicons name="chevron-forward" size={20} color={theme.textSecondary} />
-              </TouchableOpacity>
             </View>
           )}
         </ScrollView>

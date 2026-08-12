@@ -6,6 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { UserBadge } from '@/components/user-badge';
 import { useTheme } from '@/hooks/use-theme';
 import { supabase } from '@/lib/supabase';
 import { Spacing, MaxContentWidth } from '@/constants/theme';
@@ -235,8 +236,6 @@ export default function FollowersScreen() {
   }, [fetchFollowers]);
 
   const renderUserItem = ({ item }: { item: UserProfile }) => {
-    const badge = item.profile_badge ? BADGES.find(b => b.id === item.profile_badge) : null;
-    
     return (
       <View style={[styles.userCard, { backgroundColor: theme.backgroundElement }]}>
         <TouchableOpacity 
@@ -253,14 +252,7 @@ export default function FollowersScreen() {
           <View style={styles.userInfo}>
             <View style={styles.usernameRow}>
               <ThemedText type="defaultSemiBold">{item.full_name || item.username}</ThemedText>
-              {badge && (
-                <Ionicons 
-                  name={badge.icon as any} 
-                  size={14} 
-                  color={badge.color} 
-                  style={styles.badgeIcon} 
-                />
-              )}
+              <UserBadge badgeId={item.profile_badge} size={20} style={styles.badgeIcon} />
             </View>
             {item.full_name ? (
               <ThemedText style={styles.username}>@{item.username}</ThemedText>

@@ -6,6 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { UserBadge } from '@/components/user-badge';
 import { useTheme } from '@/hooks/use-theme';
 import { supabase } from '@/lib/supabase';
 import { Spacing } from '@/constants/theme';
@@ -264,8 +265,6 @@ export default function CommentsScreen() {
 
   const renderReplies = (replies: Comment[]) => {
     return replies.map(reply => {
-      const replyBadge = reply.profiles.profile_badge ? BADGES.find(b => b.id === reply.profiles.profile_badge) : null;
-      
       return (
         <View key={reply.id} style={styles.commentRow}>
            <Image 
@@ -275,14 +274,7 @@ export default function CommentsScreen() {
           <View style={styles.commentContent}>
             <View style={styles.usernameRow}>
               <ThemedText style={styles.username}>{reply.profiles.username}</ThemedText>
-              {replyBadge && (
-                <Ionicons 
-                  name={replyBadge.icon as any} 
-                  size={12} 
-                  color={replyBadge.color} 
-                  style={styles.badgeIcon} 
-                />
-              )}
+              <UserBadge badgeId={reply.profiles.profile_badge} size={16} style={styles.badgeIcon} />
             </View>
             <ThemedText style={styles.text}>{reply.content}</ThemedText>
             <View style={styles.commentActions}>
@@ -319,8 +311,6 @@ export default function CommentsScreen() {
   };
 
   const renderComment = ({ item }: { item: Comment }) => {
-    const itemBadge = item.profiles.profile_badge ? BADGES.find(b => b.id === item.profiles.profile_badge) : null;
-    
     return (
       <View style={styles.commentContainer}>
         <View style={styles.commentRow}>
@@ -331,14 +321,7 @@ export default function CommentsScreen() {
           <View style={styles.commentContent}>
             <View style={styles.usernameRow}>
               <ThemedText style={styles.username}>{item.profiles.username}</ThemedText>
-              {itemBadge && (
-                <Ionicons 
-                  name={itemBadge.icon as any} 
-                  size={14} 
-                  color={itemBadge.color} 
-                  style={styles.badgeIcon} 
-                />
-              )}
+              <UserBadge badgeId={item.profiles.profile_badge} size={20} style={styles.badgeIcon} />
             </View>
             <ThemedText style={styles.text}>{item.content}</ThemedText>
           <View style={styles.commentActions}>

@@ -6,6 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { UserBadge } from '@/components/user-badge';
 import { useTheme } from '@/hooks/use-theme';
 import { findSoulmates } from '@/lib/api';
 import { Spacing, MaxContentWidth } from '@/constants/theme';
@@ -82,8 +83,6 @@ export default function FindSoulmateScreen() {
   };
 
   const renderItem = ({ item }: { item: { user: any; matchPercentage: number } }) => {
-    const badge = item.user.profile_badge ? BADGES.find(b => b.id === item.user.profile_badge) : null;
-    
     return (
       <TouchableOpacity 
         style={[styles.userCard, { backgroundColor: theme.backgroundElement }]}
@@ -103,14 +102,7 @@ export default function FindSoulmateScreen() {
           <View style={styles.userDetails}>
             <View style={styles.usernameRow}>
               <ThemedText type="defaultSemiBold">{item.user.full_name || item.user.username}</ThemedText>
-              {badge && (
-                <Ionicons 
-                  name={badge.icon as any} 
-                  size={14} 
-                  color={badge.color} 
-                  style={styles.badgeIcon} 
-                />
-              )}
+              <UserBadge badgeId={item.user.profile_badge} size={20} style={styles.badgeIcon} />
             </View>
             <ThemedText style={styles.username}>@{item.user.username}</ThemedText>
           </View>

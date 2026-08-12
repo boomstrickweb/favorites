@@ -74,6 +74,12 @@ const TabLayout = () => {
           ),
         }}
       />
+      <Tabs.Screen
+        name="profile/gifts"
+        options={{
+          href: null,
+        }}
+      />
     </Tabs>
   );
 };

@@ -6,6 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { UserBadge } from '@/components/user-badge';
 import { useTheme } from '@/hooks/use-theme';
 import { supabase } from '@/lib/supabase';
 import { Spacing, MaxContentWidth } from '@/constants/theme';
@@ -113,8 +114,6 @@ export default function BlockedAccountsScreen() {
   };
 
   const renderItem = ({ item }: { item: BlockedUser }) => {
-    const badge = item.profiles.profile_badge ? BADGES.find(b => b.id === item.profiles.profile_badge) : null;
-    
     return (
       <View style={[styles.userItem, { borderBottomColor: theme.backgroundSelected }]}>
         <View style={styles.userInfo}>
@@ -128,14 +127,7 @@ export default function BlockedAccountsScreen() {
           <View style={styles.userDetails}>
             <View style={styles.usernameRow}>
               <ThemedText type="defaultSemiBold">{item.profiles.full_name || item.profiles.username}</ThemedText>
-              {badge && (
-                <Ionicons 
-                  name={badge.icon as any} 
-                  size={14} 
-                  color={badge.color} 
-                  style={styles.badgeIcon} 
-                />
-              )}
+              <UserBadge badgeId={item.profiles.profile_badge} size={20} style={styles.badgeIcon} />
             </View>
             <ThemedText style={styles.username}>@{item.profiles.username}</ThemedText>
           </View>

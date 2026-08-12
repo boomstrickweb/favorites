@@ -1,4 +1,11 @@
+import 'react-native-get-random-values';
+import 'fast-text-encoding';
+import { Buffer } from 'buffer';
 import { DarkTheme, DefaultTheme, ThemeProvider, Stack, useRouter } from 'expo-router';
+
+if (typeof global.Buffer === 'undefined') {
+  global.Buffer = Buffer;
+}
 export { ErrorBoundary } from 'expo-router';
 import { useColorScheme, View, Text, TouchableOpacity, Platform, AppState } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';

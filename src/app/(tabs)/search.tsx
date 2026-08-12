@@ -5,6 +5,7 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { UserBadge } from '@/components/user-badge';
 import { useDebounce } from '@/hooks/use-debounce';
 import { searchMovies, searchMusic, searchBooks, searchSports, searchDishes, searchDrinks, searchDesserts, searchCountries, SearchResult, getPersonDetails, getMovieDetails, getTVShowDetails, getArtistDetails, getAlbumDetails, getSongDetails, getAuthorDetails, getBookDetails, searchUsers, searchVehicles, searchGames } from '@/lib/api';
 import { useTheme } from '@/hooks/use-theme';
@@ -1259,7 +1260,6 @@ export default function SearchScreen() {
 
     // Some images (like flags from country search) might not have a scheme on some platforms
     const imageUri = item.image;
-    const badge = item.type === 'user' && item.details?.profile_badge ? BADGES.find(b => b.id === item.details.profile_badge) : null;
 
     return (
       <View style={styles.resultItemContainer}>
@@ -1281,13 +1281,8 @@ export default function SearchScreen() {
             <View style={styles.titleRow}>
               <View style={styles.usernameRow}>
                 <ThemedText type="defaultSemiBold" numberOfLines={1} style={styles.titleText}>{item.title}</ThemedText>
-                {badge && (
-                  <Ionicons 
-                    name={badge.icon as any} 
-                    size={14} 
-                    color={badge.color} 
-                    style={styles.badgeIcon} 
-                  />
+                {item.type === 'user' && (
+                  <UserBadge badgeId={item.details?.profile_badge} size={20} style={styles.badgeIcon} />
                 )}
               </View>
               <View style={styles.sourceBadge}>
