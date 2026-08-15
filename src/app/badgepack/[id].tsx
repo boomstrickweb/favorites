@@ -42,6 +42,9 @@ export default function BadgePackDetailScreen() {
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [selectedBadgeForOptions, setSelectedBadgeForOptions] = useState<any>(null);
   const [showBadgeOptionsModal, setShowBadgeOptionsModal] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [showDeletePackModal, setShowDeletePackModal] = useState(false);
+  const [deletingPack, setDeletingPack] = useState(false);
 
   useEffect(() => {
     fetchCurrentUser();
@@ -111,7 +114,7 @@ export default function BadgePackDetailScreen() {
         // On web, we sometimes need to explicitly request permissions even though launchImageLibraryAsync handles it
         const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
         if (status !== 'granted') {
-          alert('Permission to access media library was denied');
+          window.alert('Permission to access media library was denied');
           return;
         }
       }
@@ -156,12 +159,28 @@ export default function BadgePackDetailScreen() {
   };
 
   const handleUpload = async () => {
+    if (Platform.OS !== 'web') {
+      Alert.alert(
+        'Not Available on Mobile',
+        'Badge uploading is currently only available on the web version. Please use the web version to upload badges.'
+      );
+      return;
+    }
+
     if (!badgeName.trim()) {
-      Alert.alert('Error', 'Please enter a badge name');
+      if (Platform.OS === 'web') {
+        window.alert('Please enter a badge name');
+      } else {
+        Alert.alert('Error', 'Please enter a badge name');
+      }
       return;
     }
     if (!selectedImage) {
-      Alert.alert('Error', 'Please select an image');
+      if (Platform.OS === 'web') {
+        window.alert('Please select an image');
+      } else {
+        Alert.alert('Error', 'Please select an image');
+      }
       return;
     }
 
@@ -200,14 +219,23 @@ export default function BadgePackDetailScreen() {
 
       if (error) throw error;
 
-      Alert.alert('Success', 'Badge uploaded successfully!');
+      if (Platform.OS === 'web') {
+        window.alert('Badge uploaded successfully!');
+      } else {
+        Alert.alert('Success', 'Badge uploaded successfully!');
+      }
       setShowUploadModal(false);
       setBadgeName('');
       setSelectedImage(null);
       fetchBadges();
 
     } catch (error: any) {
-      Alert.alert('Error', 'Failed to upload badge: ' + error.message);
+      console.error('Error uploading badge:', error);
+      if (Platform.OS === 'web') {
+        window.alert('Failed to upload badge: ' + (error.message || 'Unknown error'));
+      } else {
+        Alert.alert('Error', 'Failed to upload badge: ' + (error.message || 'Unknown error'));
+      }
     } finally {
       setUploading(false);
     }
@@ -218,10 +246,18 @@ export default function BadgePackDetailScreen() {
     setShowBadgeOptionsModal(true);
   };
 
+  const closeOptionsModal = () => {
+    setShowBadgeOptionsModal(false);
+  };
+
   const handleSetAsProfileBadge = async (badge: any) => {
     try {
       if (!currentUser) {
-        Alert.alert('Error', 'You must be logged in to set a badge');
+        if (Platform.OS === 'web') {
+          window.alert('You must be logged in to set a badge');
+        } else {
+          Alert.alert('Error', 'You must be logged in to set a badge');
+        }
         return;
       }
 
@@ -231,37 +267,86 @@ export default function BadgePackDetailScreen() {
         .eq('id', currentUser.id);
 
       if (error) throw error;
-      Alert.alert('Success', 'Badge set as profile badge');
+      closeOptionsModal();
+      if (Platform.OS === 'web') {
+        window.alert('Badge set as profile badge');
+      } else {
+        Alert.alert('Success', 'Badge set as profile badge');
+      }
     } catch (error: any) {
-      Alert.alert('Error', 'Failed to set badge: ' + error.message);
+      if (Platform.OS === 'web') {
+        window.alert('Failed to set badge: ' + error.message);
+      } else {
+        Alert.alert('Error', 'Failed to set badge: ' + error.message);
+      }
     }
   };
 
-  const handleDeleteBadge = (badge: any) => {
-    Alert.alert(
-      'Delete Badge',
-      `Are you sure you want to delete "${badge.name}"?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { 
-          text: 'Delete', 
-          style: 'destructive', 
-          onPress: async () => {
-            try {
-              const { error } = await supabase
-                .from('badges')
-                .delete()
-                .eq('id', badge.id);
-              
-              if (error) throw error;
-              fetchBadges();
-            } catch (error: any) {
-              Alert.alert('Error', 'Failed to delete badge: ' + error.message);
-            }
-          }
-        }
-      ]
-    );
+  const performDeleteBadge = async (badge: any) => {
+    if (!badge || !badge.id) return;
+    try {
+      setIsDeleting(true);
+      closeOptionsModal();
+      // Optimistic update
+      setBadges(prev => prev.filter(b => b.id !== badge.id));
+
+      const { error } = await supabase
+        .from('badges')
+        .delete()
+        .eq('id', badge.id);
+      
+      if (error) {
+        console.error('Error deleting badge:', error);
+        fetchBadges();
+        throw error;
+      }
+    } catch (error: any) {
+      console.error('Failed to delete badge:', error);
+      if (Platform.OS === 'web') {
+        window.alert('Failed to delete badge: ' + (error.message || 'Unknown error'));
+      } else {
+        Alert.alert('Error', 'Failed to delete badge: ' + (error.message || 'Unknown error'));
+      }
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const handleDeletePack = () => {
+    setShowDeletePackModal(true);
+  };
+
+  const confirmDeletePack = async () => {
+    if (!id) return;
+    try {
+      setDeletingPack(true);
+      const { error } = await supabase
+        .from('badge_packs')
+        .delete()
+        .eq('id', id);
+
+      if (error) {
+        console.error('Error deleting badge pack:', error);
+        throw error;
+      }
+
+      setShowDeletePackModal(false);
+      if (Platform.OS === 'web') {
+        window.alert('Badge pack deleted successfully');
+      } else {
+        Alert.alert('Success', 'Badge pack deleted successfully');
+      }
+      router.replace('/badgemarketplace');
+    } catch (error: any) {
+      console.error('Failed to delete badge pack:', error);
+      if (Platform.OS === 'web') {
+        window.alert('Failed to delete pack: ' + (error.message || 'Unknown error'));
+      } else {
+        Alert.alert('Error', 'Failed to delete pack: ' + (error.message || 'Unknown error'));
+      }
+    } finally {
+      setDeletingPack(false);
+    }
   };
 
   if (loading) {
@@ -286,7 +371,13 @@ export default function BadgePackDetailScreen() {
           <ThemedText type="subtitle" numberOfLines={1} style={{ flex: 1, textAlign: 'center' }}>
             {pack.name}
           </ThemedText>
-          <View style={{ width: 28 }} />
+          {isOwner ? (
+            <TouchableOpacity onPress={handleDeletePack} style={styles.headerButton}>
+              <Ionicons name="trash-outline" size={22} color="#FF4444" />
+            </TouchableOpacity>
+          ) : (
+            <View style={{ width: 28 }} />
+          )}
         </View>
 
         <ScrollView contentContainerStyle={styles.scrollContent}>
@@ -298,13 +389,32 @@ export default function BadgePackDetailScreen() {
             <ThemedText style={styles.packCreator}>by {pack.profiles?.username || 'Unknown'}</ThemedText>
             
             {isOwner && (
-              <TouchableOpacity 
-                style={[styles.uploadButton, { backgroundColor: theme.brand }]}
-                onPress={() => setShowUploadModal(true)}
-              >
-                <Ionicons name="cloud-upload-outline" size={20} color="#FFF" />
-                <ThemedText style={styles.uploadButtonText}>Upload Badge</ThemedText>
-              </TouchableOpacity>
+              <View style={styles.ownerActionsContainer}>
+                <TouchableOpacity 
+                  style={[styles.uploadButton, { backgroundColor: theme.brand }]}
+                  onPress={() => {
+                    if (Platform.OS !== 'web') {
+                      Alert.alert(
+                        'Not Available on Mobile',
+                        'Badge uploading is currently only available on the web version. Please use the web version to upload badges.'
+                      );
+                      return;
+                    }
+                    setShowUploadModal(true);
+                  }}
+                >
+                  <Ionicons name="cloud-upload-outline" size={20} color="#FFF" />
+                  <ThemedText style={styles.uploadButtonText}>Upload Badge</ThemedText>
+                </TouchableOpacity>
+
+                <TouchableOpacity 
+                  style={[styles.deletePackButton, { borderColor: '#FF4444' }]}
+                  onPress={handleDeletePack}
+                >
+                  <Ionicons name="trash-outline" size={18} color="#FF4444" />
+                  <ThemedText style={styles.deletePackButtonText}>Delete Pack</ThemedText>
+                </TouchableOpacity>
+              </View>
             )}
           </View>
 
@@ -339,51 +449,93 @@ export default function BadgePackDetailScreen() {
         visible={showBadgeOptionsModal}
         animationType="fade"
         transparent={true}
-        onRequestClose={() => setShowBadgeOptionsModal(false)}
+        onRequestClose={closeOptionsModal}
       >
-        <TouchableOpacity 
-          style={styles.modalOverlay} 
-          activeOpacity={1} 
-          onPress={() => setShowBadgeOptionsModal(false)}
-        >
+        <View style={styles.centerModalOverlay}>
+          <TouchableOpacity 
+            style={StyleSheet.absoluteFill} 
+            activeOpacity={1} 
+            onPress={closeOptionsModal} 
+          />
           <ThemedView style={styles.optionsModalContent}>
             <View style={styles.optionsHeader}>
-              <ThemedText type="subtitle">{selectedBadgeForOptions?.name}</ThemedText>
+              <ThemedText type="subtitle" numberOfLines={1}>{selectedBadgeForOptions?.name}</ThemedText>
             </View>
             
             <TouchableOpacity 
               style={styles.optionItem} 
-              onPress={() => {
-                setShowBadgeOptionsModal(false);
-                handleSetAsProfileBadge(selectedBadgeForOptions);
-              }}
+              onPress={() => handleSetAsProfileBadge(selectedBadgeForOptions)}
             >
               <Ionicons name="person-circle-outline" size={24} color={theme.text} />
               <ThemedText style={styles.optionText}>Set as profile badge</ThemedText>
             </TouchableOpacity>
 
-            {isOwner && (
-              <TouchableOpacity 
-                style={styles.optionItem} 
-                onPress={() => {
-                  setShowBadgeOptionsModal(false);
-                  handleDeleteBadge(selectedBadgeForOptions);
-                }}
-              >
-                <Ionicons name="trash-outline" size={24} color="#FF4444" />
-                <ThemedText style={[styles.optionText, { color: '#FF4444' }]}>Delete</ThemedText>
-              </TouchableOpacity>
-            )}
+            <TouchableOpacity 
+              style={styles.optionItem} 
+              onPress={() => performDeleteBadge(selectedBadgeForOptions)}
+            >
+              <Ionicons name="trash-outline" size={24} color="#FF4444" />
+              <ThemedText style={[styles.optionText, { color: '#FF4444' }]}>Delete</ThemedText>
+            </TouchableOpacity>
 
             <TouchableOpacity 
               style={[styles.optionItem, { borderBottomWidth: 0 }]} 
-              onPress={() => setShowBadgeOptionsModal(false)}
+              onPress={closeOptionsModal}
             >
               <Ionicons name="close-outline" size={24} color={theme.textSecondary} />
               <ThemedText style={[styles.optionText, { color: theme.textSecondary }]}>Cancel</ThemedText>
             </TouchableOpacity>
           </ThemedView>
-        </TouchableOpacity>
+        </View>
+      </Modal>
+
+      <Modal
+        visible={showDeletePackModal}
+        animationType="fade"
+        transparent={true}
+        onRequestClose={() => setShowDeletePackModal(false)}
+      >
+        <View style={styles.centerModalOverlay}>
+          <TouchableOpacity 
+            style={StyleSheet.absoluteFill} 
+            activeOpacity={1} 
+            onPress={() => setShowDeletePackModal(false)} 
+          />
+          <ThemedView style={styles.optionsModalContent}>
+            <View style={styles.confirmDeleteContainer}>
+              <View style={styles.optionsHeader}>
+                <ThemedText type="subtitle" style={{ color: '#FF4444' }}>Delete Badge Pack?</ThemedText>
+              </View>
+              
+              <ThemedText style={styles.confirmDeleteText}>
+                Are you sure you want to delete &quot;{pack?.name}&quot;? All badges inside this pack will also be permanently deleted.
+              </ThemedText>
+
+              <TouchableOpacity 
+                style={[styles.confirmDeleteButton, deletingPack && { opacity: 0.6 }]} 
+                onPress={confirmDeletePack}
+                disabled={deletingPack}
+              >
+                {deletingPack ? (
+                  <ActivityIndicator size="small" color="#FFF" />
+                ) : (
+                  <>
+                    <Ionicons name="trash-outline" size={18} color="#FFF" />
+                    <ThemedText style={styles.confirmDeleteButtonText}>Delete Pack</ThemedText>
+                  </>
+                )}
+              </TouchableOpacity>
+
+              <TouchableOpacity 
+                style={styles.cancelDeleteButton} 
+                onPress={() => setShowDeletePackModal(false)}
+                disabled={deletingPack}
+              >
+                <ThemedText style={[styles.cancelDeleteButtonText, { color: theme.textSecondary }]}>Cancel</ThemedText>
+              </TouchableOpacity>
+            </View>
+          </ThemedView>
+        </View>
       </Modal>
 
       <Modal
@@ -467,6 +619,9 @@ const styles = StyleSheet.create({
   backButton: {
     padding: 4,
   },
+  headerButton: {
+    padding: 4,
+  },
   scrollContent: {
     padding: Spacing.four,
   },
@@ -493,6 +648,13 @@ const styles = StyleSheet.create({
     opacity: 0.7,
     marginBottom: Spacing.six,
   },
+  ownerActionsContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.three,
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+  },
   uploadButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -503,6 +665,20 @@ const styles = StyleSheet.create({
   },
   uploadButtonText: {
     color: '#FFF',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  deletePackButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: Spacing.five,
+    paddingVertical: Spacing.three,
+    borderRadius: 25,
+    borderWidth: 1,
+    gap: Spacing.two,
+  },
+  deletePackButtonText: {
+    color: '#FF4444',
     fontSize: 16,
     fontWeight: 'bold',
   },
@@ -551,6 +727,13 @@ const styles = StyleSheet.create({
     zIndex: 10,
     backgroundColor: 'rgba(0,0,0,0.3)',
     borderRadius: 12,
+  },
+  centerModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: Spacing.four,
   },
   modalOverlay: {
     flex: 1,
@@ -614,18 +797,18 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   optionsModalContent: {
-    width: '80%',
+    width: '88%',
+    maxWidth: 380,
     alignSelf: 'center',
     borderRadius: 20,
-    padding: Spacing.four,
-    marginBottom: 'auto',
-    marginTop: 'auto',
+    padding: Spacing.five,
   },
   optionsHeader: {
     paddingBottom: Spacing.four,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: 'rgba(128,128,128,0.2)',
     alignItems: 'center',
+    width: '100%',
   },
   optionItem: {
     flexDirection: 'row',
@@ -637,6 +820,43 @@ const styles = StyleSheet.create({
   },
   optionText: {
     fontSize: 16,
+    fontWeight: '500',
+  },
+  confirmDeleteContainer: {
+    alignItems: 'center',
+    width: '100%',
+  },
+  confirmDeleteText: {
+    textAlign: 'center',
+    marginVertical: Spacing.four,
+    fontSize: 15,
+    lineHeight: 22,
+  },
+  confirmDeleteButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.two,
+    backgroundColor: '#FF4444',
+    paddingVertical: Spacing.three,
+    paddingHorizontal: Spacing.five,
+    borderRadius: 12,
+    width: '100%',
+    marginTop: Spacing.two,
+  },
+  confirmDeleteButtonText: {
+    color: '#FFF',
+    fontWeight: 'bold',
+    fontSize: 16,
+  },
+  cancelDeleteButton: {
+    paddingVertical: Spacing.three,
+    marginTop: Spacing.two,
+    alignItems: 'center',
+    width: '100%',
+  },
+  cancelDeleteButtonText: {
+    fontSize: 15,
     fontWeight: '500',
   },
 });
