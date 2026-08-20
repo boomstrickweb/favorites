@@ -73,8 +73,6 @@ export function Gifts({ userId, isFullScreen }: GiftsProps) {
   const [receivedGifts, setReceivedGifts] = useState<GiftRecord[]>([]);
   const [stats, setStats] = useState<GiftStats[]>([]);
   const [topGifter, setTopGifter] = useState<TopGifter | null>(null);
-  const [globalTopGifters, setGlobalTopGifters] = useState<TopGifter[]>([]);
-  const [totalGiftsSentGlobally, setTotalGiftsSentGlobally] = useState(0);
 
   useEffect(() => {
     fetchGiftsData();
@@ -127,43 +125,6 @@ export function Gifts({ userId, isFullScreen }: GiftsProps) {
         }
       });
       setTopGifter(top);
-
-      // 4. Global Stats: Total gifts sent
-      const { count: globalCount, error: globalError } = await supabase
-        .from('gifts')
-        .select('*', { count: 'exact', head: true });
-      
-      if (!globalError) {
-        setTotalGiftsSentGlobally(globalCount || 0);
-      }
-
-      // 5. Global Top Gifters
-      const { data: globalGifts, error: globalGiftsError } = await supabase
-        .from('gifts')
-        .select(`
-          sender_id,
-          sender:profiles!sender_id(username)
-        `);
-      
-      if (!globalGiftsError && globalGifts) {
-        const globalGifterCounts: Record<string, { username: string; count: number }> = {};
-        globalGifts.forEach(g => {
-          const sid = g.sender_id;
-          const suname = (g.sender as any)?.username || 'Unknown';
-          if (!globalGifterCounts[sid]) {
-            globalGifterCounts[sid] = { username: suname, count: 0 };
-          }
-          globalGifterCounts[sid].count += 1;
-        });
-        
-        const topGlobal = Object.entries(globalGifterCounts)
-          .map(([id, data]) => ({ sender_id: id, username: data.username, count: data.count }))
-          .sort((a, b) => b.count - a.count)
-          .slice(0, 3);
-        
-        setGlobalTopGifters(topGlobal);
-      }
-
     } catch (error) {
       console.error('Error fetching gifts data:', error);
     } finally {
@@ -219,20 +180,17 @@ export function Gifts({ userId, isFullScreen }: GiftsProps) {
               <ThemedText type="defaultSemiBold" style={styles.statValue}>{receivedGifts.length}</ThemedText>
               <ThemedText style={styles.statLabel}>Received</ThemedText>
             </View>
-            <View style={styles.statDivider} />
             {topGifter && (
-              <View style={styles.statBox}>
-                <ThemedText type="defaultSemiBold" style={styles.statValue} numberOfLines={1}>
-                  {topGifter.username}
-                </ThemedText>
-                <ThemedText style={styles.statLabel}>Top Gifter</ThemedText>
-              </View>
+              <>
+                <View style={styles.statDivider} />
+                <View style={styles.statBox}>
+                  <ThemedText type="defaultSemiBold" style={styles.statValue} numberOfLines={1}>
+                    {topGifter.username}
+                  </ThemedText>
+                  <ThemedText style={styles.statLabel}>Top Gifter</ThemedText>
+                </View>
+              </>
             )}
-            <View style={styles.statDivider} />
-            <View style={styles.statBox}>
-              <ThemedText type="defaultSemiBold" style={styles.statValue}>{totalGiftsSentGlobally}</ThemedText>
-              <ThemedText style={styles.statLabel}>Global</ThemedText>
-            </View>
           </View>
 
           {/* Grouped Inventory */}
@@ -256,24 +214,6 @@ export function Gifts({ userId, isFullScreen }: GiftsProps) {
               </View>
               <View style={styles.inventoryGrid}>
                 {standardInventory.map(renderInventoryItem)}
-              </View>
-            </View>
-          )}
-
-          {/* Global Leaderboard - Grouped horizontally to save space */}
-          {globalTopGifters.length > 0 && (
-            <View style={styles.section}>
-              <ThemedText type="defaultSemiBold" style={styles.sectionTitle}>Community Leaderboard</ThemedText>
-              <View style={[styles.leaderboardRow, { backgroundColor: theme.backgroundElement }]}>
-                {globalTopGifters.map((gifter, index) => (
-                  <View key={gifter.sender_id} style={styles.leaderboardCard}>
-                    <View style={[styles.rankBadge, { backgroundColor: index === 0 ? '#FFD700' : index === 1 ? '#C0C0C0' : '#CD7F32' }]}>
-                      <ThemedText style={styles.rankText}>{index + 1}</ThemedText>
-                    </View>
-                    <ThemedText style={styles.leaderboardName} numberOfLines={1}>{gifter.username}</ThemedText>
-                    <ThemedText style={styles.leaderboardCount}>{gifter.count}</ThemedText>
-                  </View>
-                ))}
               </View>
             </View>
           )}
@@ -413,38 +353,5 @@ const styles = StyleSheet.create({
   historyDate: {
     fontSize: 12,
     opacity: 0.5,
-  },
-  leaderboardRow: {
-    flexDirection: 'row',
-    borderRadius: 16,
-    padding: Spacing.three,
-    justifyContent: 'space-between',
-    gap: Spacing.two,
-  },
-  leaderboardCard: {
-    flex: 1,
-    alignItems: 'center',
-    gap: Spacing.one,
-  },
-  rankBadge: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  rankText: {
-    fontSize: 12,
-    fontWeight: 'bold',
-    color: '#000',
-  },
-  leaderboardName: {
-    fontSize: 12,
-    fontWeight: '500',
-    textAlign: 'center',
-  },
-  leaderboardCount: {
-    fontSize: 10,
-    opacity: 0.6,
   },
 });
