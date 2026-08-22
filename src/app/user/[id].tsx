@@ -11,6 +11,8 @@ import { supabase } from '@/lib/supabase';
 import { Spacing, MaxContentWidth } from '@/constants/theme';
 import { BADGES } from '../selectbadge';
 import { UserBadge } from '@/components/user-badge';
+import { ProfileThemeBackground } from '@/components/profile-theme-background';
+import { getProfileTheme } from '@/constants/profile-themes';
 
 import { Gifts } from '@/components/Gifts';
 
@@ -35,6 +37,7 @@ interface UserProfile {
   is_premium?: boolean;
   stalk_mode?: boolean;
   profile_badge?: string | null;
+  selected_theme?: string | null;
 }
 
 export default function UserProfileScreen() {
@@ -478,19 +481,24 @@ export default function UserProfileScreen() {
     );
   }
 
+  const profileTheme = getProfileTheme(profile?.selected_theme);
+  const cardBg = profileTheme ? profileTheme.cardBg : theme.backgroundElement;
+  const cardBorder = profileTheme ? profileTheme.cardBorder : 'transparent';
+  const cardBorderWidth = profileTheme ? 1 : 0;
+
   return (
-    <ThemedView style={styles.container}>
+    <ProfileThemeBackground themeId={profile?.selected_theme} style={styles.container}>
       <SafeAreaView style={styles.safeArea} edges={['top']}>
           <View style={styles.navHeader}>
             <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-              <Ionicons name="chevron-back" size={28} color={theme.text} />
+              <Ionicons name="chevron-back" size={28} color={profileTheme ? profileTheme.textColor : theme.text} />
             </TouchableOpacity>
-            <ThemedText type="defaultSemiBold">Profile</ThemedText>
+            <ThemedText type="defaultSemiBold" style={profileTheme && { color: profileTheme.textColor }}>Profile</ThemedText>
             <View style={styles.headerActions}>
               {isCurrentUserPremium && currentUser && currentUser.id !== profile.id && !isFollowing && (
                 <TouchableOpacity 
                   onPress={handleToggleNotification}
-                  style={styles.headerButton}
+                  style={[styles.headerButton, profileTheme && { backgroundColor: cardBg, borderColor: cardBorder, borderWidth: cardBorderWidth }]}
                   disabled={notificationLoading}
                 >
                   {notificationLoading ? (
@@ -499,7 +507,7 @@ export default function UserProfileScreen() {
                     <Ionicons 
                       name={hasNotificationsEnabled ? "notifications" : "notifications-outline"} 
                       size={24} 
-                      color={hasNotificationsEnabled ? theme.brand : theme.text} 
+                      color={hasNotificationsEnabled ? (profileTheme ? profileTheme.primaryColor : theme.brand) : (profileTheme ? profileTheme.textColor : theme.text)} 
                     />
                   )}
                 </TouchableOpacity>
@@ -513,15 +521,15 @@ export default function UserProfileScreen() {
                       userName: profile.full_name || profile.username 
                     }
                   })} 
-                  style={styles.headerButton}
+                  style={[styles.headerButton, profileTheme && { backgroundColor: cardBg, borderColor: cardBorder, borderWidth: cardBorderWidth }]}
                 >
-                  <Ionicons name="gift-outline" size={24} color={theme.brand} />
+                  <Ionicons name="gift-outline" size={24} color={profileTheme ? profileTheme.primaryColor : theme.brand} />
                 </TouchableOpacity>
               ) : null}
               {currentUser && currentUser.id !== profile.id ? (
                 <TouchableOpacity 
                   onPress={isBlocked ? handleUnblockUser : handleBlockUser} 
-                  style={styles.headerButton}
+                  style={[styles.headerButton, profileTheme && { backgroundColor: cardBg, borderColor: cardBorder, borderWidth: cardBorderWidth }]}
                   disabled={blockLoading}
                 >
                   {blockLoading ? (
@@ -530,7 +538,7 @@ export default function UserProfileScreen() {
                     <Ionicons 
                       name={isBlocked ? "lock-open-outline" : "ban-outline"} 
                       size={22} 
-                      color={isBlocked ? theme.brand : "#FF3B30"} 
+                      color={isBlocked ? (profileTheme ? profileTheme.primaryColor : theme.brand) : "#FF3B30"} 
                     />
                   )}
                 </TouchableOpacity>
@@ -543,30 +551,30 @@ export default function UserProfileScreen() {
         <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
           <View style={styles.header}>
             <View style={styles.profileInfo}>
-              <View style={[styles.avatar, { backgroundColor: theme.backgroundElement }]}>
+              <View style={[styles.avatar, { backgroundColor: cardBg, borderColor: cardBorder, borderWidth: cardBorderWidth }]}>
                 {profile.avatar_url ? (
                   <Image source={{ uri: profile.avatar_url }} style={styles.avatarImage} />
                 ) : (
-                  <Ionicons name="person" size={40} color={theme.textSecondary} />
+                  <Ionicons name="person" size={40} color={profileTheme ? profileTheme.textColor : theme.textSecondary} />
                 )}
               </View>
               <View style={styles.nameContainer}>
                 <View style={styles.usernameRow}>
-                  <ThemedText type="defaultSemiBold" style={styles.username}>
+                  <ThemedText type="defaultSemiBold" style={[styles.username, profileTheme && { color: profileTheme.textColor }]}>
                     {profile.full_name || profile.username}
                   </ThemedText>
                   <UserBadge badgeId={profile.profile_badge} size={Platform.OS === 'web' ? 32 : 28} />
                 </View>
                 {profile.full_name ? (
-                  <ThemedText style={styles.handle}>@{profile.username}</ThemedText>
+                  <ThemedText style={[styles.handle, profileTheme && { color: profileTheme.textSecondaryColor }]}>@{profile.username}</ThemedText>
                 ) : null}
               </View>
             </View>
           </View>
 
           {profile.bio ? (
-            <View style={styles.bioContainer}>
-              <ThemedText style={styles.bioText}>{profile.bio}</ThemedText>
+            <View style={[styles.bioContainer, profileTheme && { backgroundColor: cardBg, borderColor: cardBorder, borderWidth: cardBorderWidth, padding: Spacing.three, borderRadius: 14 }]}>
+              <ThemedText style={[styles.bioText, profileTheme && { color: profileTheme.textColor }]}>{profile.bio}</ThemedText>
             </View>
           ) : null}
 
@@ -575,15 +583,15 @@ export default function UserProfileScreen() {
               {profile.interests.map((interest) => (
                 <View 
                   key={interest} 
-                  style={[styles.interestChip, { backgroundColor: theme.backgroundElement }]}
+                  style={[styles.interestChip, { backgroundColor: cardBg, borderColor: cardBorder, borderWidth: cardBorderWidth }]}
                 >
                   <Ionicons 
                     name={interestIcons[interest] || 'star'} 
                     size={14} 
-                    color={theme.textSecondary} 
+                    color={profileTheme ? profileTheme.primaryColor : theme.textSecondary} 
                     style={{ marginRight: 6 }}
                   />
-                  <ThemedText style={styles.interestText}>{interest}</ThemedText>
+                  <ThemedText style={[styles.interestText, profileTheme && { color: profileTheme.textColor }]}>{interest}</ThemedText>
                 </View>
               ))}
             </View>
@@ -591,33 +599,33 @@ export default function UserProfileScreen() {
 
           <View style={styles.socialContainer}>
             {profile.instagram_url ? (
-              <TouchableOpacity style={styles.socialIcon} activeOpacity={0.7}>
-                <Ionicons name="logo-instagram" size={24} color={theme.text} />
+              <TouchableOpacity style={[styles.socialIcon, profileTheme && { backgroundColor: cardBg, borderColor: cardBorder, borderWidth: cardBorderWidth, padding: 8, borderRadius: 20 }]} activeOpacity={0.7}>
+                <Ionicons name="logo-instagram" size={24} color={profileTheme ? profileTheme.textColor : theme.text} />
               </TouchableOpacity>
             ) : null}
             {profile.facebook_url ? (
-              <TouchableOpacity style={styles.socialIcon} activeOpacity={0.7}>
-                <Ionicons name="logo-facebook" size={24} color={theme.text} />
+              <TouchableOpacity style={[styles.socialIcon, profileTheme && { backgroundColor: cardBg, borderColor: cardBorder, borderWidth: cardBorderWidth, padding: 8, borderRadius: 20 }]} activeOpacity={0.7}>
+                <Ionicons name="logo-facebook" size={24} color={profileTheme ? profileTheme.textColor : theme.text} />
               </TouchableOpacity>
             ) : null}
             {profile.x_url ? (
-              <TouchableOpacity style={styles.socialIcon} activeOpacity={0.7}>
-                <Ionicons name="logo-twitter" size={24} color={theme.text} />
+              <TouchableOpacity style={[styles.socialIcon, profileTheme && { backgroundColor: cardBg, borderColor: cardBorder, borderWidth: cardBorderWidth, padding: 8, borderRadius: 20 }]} activeOpacity={0.7}>
+                <Ionicons name="logo-twitter" size={24} color={profileTheme ? profileTheme.textColor : theme.text} />
               </TouchableOpacity>
             ) : null}
             {profile.pinterest_url ? (
-              <TouchableOpacity style={styles.socialIcon} activeOpacity={0.7}>
-                <Ionicons name="logo-pinterest" size={24} color={theme.text} />
+              <TouchableOpacity style={[styles.socialIcon, profileTheme && { backgroundColor: cardBg, borderColor: cardBorder, borderWidth: cardBorderWidth, padding: 8, borderRadius: 20 }]} activeOpacity={0.7}>
+                <Ionicons name="logo-pinterest" size={24} color={profileTheme ? profileTheme.textColor : theme.text} />
               </TouchableOpacity>
             ) : null}
             {profile.snapchat_url ? (
-              <TouchableOpacity style={styles.socialIcon} activeOpacity={0.7}>
-                <Ionicons name="logo-snapchat" size={24} color={theme.text} />
+              <TouchableOpacity style={[styles.socialIcon, profileTheme && { backgroundColor: cardBg, borderColor: cardBorder, borderWidth: cardBorderWidth, padding: 8, borderRadius: 20 }]} activeOpacity={0.7}>
+                <Ionicons name="logo-snapchat" size={24} color={profileTheme ? profileTheme.textColor : theme.text} />
               </TouchableOpacity>
             ) : null}
           </View>
 
-          <View style={styles.statsContainer}>
+          <View style={[styles.statsContainer, profileTheme && { backgroundColor: cardBg, borderColor: cardBorder, borderWidth: cardBorderWidth, borderRadius: 16 }]}>
             <TouchableOpacity 
               style={styles.statItem}
               onPress={() => router.push({ 
@@ -625,8 +633,8 @@ export default function UserProfileScreen() {
                 params: { userName: profile.full_name || profile.username } 
               })}
             >
-              <ThemedText type="defaultSemiBold">{giftCount}</ThemedText>
-              <ThemedText style={styles.statLabel}>Gifts</ThemedText>
+              <ThemedText type="defaultSemiBold" style={profileTheme && { color: profileTheme.textColor }}>{giftCount}</ThemedText>
+              <ThemedText style={[styles.statLabel, profileTheme && { color: profileTheme.textSecondaryColor }]}>Gifts</ThemedText>
             </TouchableOpacity>
             <View style={styles.statDivider} />
             <TouchableOpacity 
@@ -643,12 +651,12 @@ export default function UserProfileScreen() {
                 }
               }}
             >
-              <ThemedText type="defaultSemiBold">
+              <ThemedText type="defaultSemiBold" style={profileTheme && { color: profileTheme.textColor }}>
                 {(!profile.privacy_followers || profile.privacy_followers === 'Everyone' || (profile.privacy_followers === 'Followers you follow back' && isFollowing && followsMe) || profile.id === currentUser?.id) 
                   ? (profile.following_count || 0) 
                   : '—'}
               </ThemedText>
-              <ThemedText style={styles.statLabel}>Following</ThemedText>
+              <ThemedText style={[styles.statLabel, profileTheme && { color: profileTheme.textSecondaryColor }]}>Following</ThemedText>
             </TouchableOpacity>
             <View style={styles.statDivider} />
             <TouchableOpacity 
@@ -665,12 +673,12 @@ export default function UserProfileScreen() {
                 }
               }}
             >
-              <ThemedText type="defaultSemiBold">
+              <ThemedText type="defaultSemiBold" style={profileTheme && { color: profileTheme.textColor }}>
                 {(!profile.privacy_followers || profile.privacy_followers === 'Everyone' || (profile.privacy_followers === 'Followers you follow back' && isFollowing && followsMe) || profile.id === currentUser?.id) 
                   ? (profile.follower_count || 0) 
                   : '—'}
               </ThemedText>
-              <ThemedText style={styles.statLabel}>Followers</ThemedText>
+              <ThemedText style={[styles.statLabel, profileTheme && { color: profileTheme.textSecondaryColor }]}>Followers</ThemedText>
             </TouchableOpacity>
           </View>
 
@@ -679,42 +687,42 @@ export default function UserProfileScreen() {
               <TouchableOpacity 
                 style={[
                   styles.followButton, 
-                  { backgroundColor: isFollowing ? theme.backgroundElement : theme.brand }
+                  { backgroundColor: isFollowing ? cardBg : (profileTheme ? profileTheme.primaryColor : theme.brand), borderColor: cardBorder, borderWidth: cardBorderWidth }
                 ]}
                 onPress={isFollowing ? handleUnfollow : handleFollow}
                 disabled={followLoading}
               >
                 {followLoading ? (
-                  <ActivityIndicator size="small" color={isFollowing ? theme.text : "#fff"} />
+                  <ActivityIndicator size="small" color={isFollowing ? (profileTheme ? profileTheme.textColor : theme.text) : "#fff"} />
                 ) : (
-                  <ThemedText style={[styles.followButtonText, { color: isFollowing ? theme.text : "#fff" }]}>
+                  <ThemedText style={[styles.followButtonText, { color: isFollowing ? (profileTheme ? profileTheme.textColor : theme.text) : (profileTheme ? '#000' : '#fff') }]}>
                     {isFollowing ? 'Following' : 'Follow'}
                   </ThemedText>
                 )}
               </TouchableOpacity>
               {(!profile.privacy_messages || profile.privacy_messages === 'Everyone' || (profile.privacy_messages === 'Followers you follow back' && isFollowing && followsMe)) && (
                 <TouchableOpacity 
-                  style={[styles.messageButton, { backgroundColor: theme.backgroundElement }]}
+                  style={[styles.messageButton, { backgroundColor: cardBg, borderColor: cardBorder, borderWidth: cardBorderWidth }]}
                   onPress={() => router.push({ pathname: '/chatscreen', params: { otherUserId: profile.id } })}
                 >
-                  <ThemedText style={styles.messageButtonText}>Message</ThemedText>
+                  <ThemedText style={[styles.messageButtonText, profileTheme && { color: profileTheme.textColor }]}>Message</ThemedText>
                 </TouchableOpacity>
               )}
               <TouchableOpacity 
-                style={[styles.compareButton, { backgroundColor: theme.backgroundElement }]}
+                style={[styles.compareButton, { backgroundColor: cardBg, borderColor: cardBorder, borderWidth: cardBorderWidth }]}
                 onPress={() => router.push({ 
                   pathname: '/compare', 
                   params: { userId: profile.id, userName: profile.full_name || profile.username } 
                 })}
               >
-                <Ionicons name="swap-horizontal" size={20} color={theme.text} />
+                <Ionicons name="swap-horizontal" size={20} color={profileTheme ? profileTheme.textColor : theme.text} />
               </TouchableOpacity>
             </View>
           )}
 
 
           <View style={styles.section}>
-            <ThemedText type="defaultSemiBold" style={styles.sectionTitle}>Collections</ThemedText>
+            <ThemedText type="defaultSemiBold" style={[styles.sectionTitle, profileTheme && { color: profileTheme.textColor }]}>Collections</ThemedText>
             {(!profile.privacy_collections || 
                profile.privacy_collections === 'Everyone' || 
                (profile.privacy_collections === 'Your Followers' && isFollowing) ||
@@ -722,80 +730,80 @@ export default function UserProfileScreen() {
                profile.id === currentUser?.id) ? (
               <View style={styles.collectionsGrid}>
                 <TouchableOpacity 
-                  style={[styles.collectionCard, { backgroundColor: theme.backgroundElement }]}
+                  style={[styles.collectionCard, { backgroundColor: cardBg, borderColor: cardBorder, borderWidth: cardBorderWidth }]}
                   activeOpacity={0.7}
                   onPress={() => router.push({ pathname: '/moviecollections', params: { userId: profile.id } })}
                 >
-                  <Ionicons name="film" size={24} color={theme.brand} />
-                  <ThemedText style={styles.collectionName}>Movies</ThemedText>
+                  <Ionicons name="film" size={24} color={profileTheme ? profileTheme.primaryColor : theme.brand} />
+                  <ThemedText style={[styles.collectionName, profileTheme && { color: profileTheme.textColor }]}>Movies</ThemedText>
                 </TouchableOpacity>
                 <TouchableOpacity 
-                  style={[styles.collectionCard, { backgroundColor: theme.backgroundElement }]}
+                  style={[styles.collectionCard, { backgroundColor: cardBg, borderColor: cardBorder, borderWidth: cardBorderWidth }]}
                   activeOpacity={0.7}
                   onPress={() => router.push({ pathname: '/musiccollections', params: { userId: profile.id } })}
                 >
                   <Ionicons name="musical-notes" size={24} color="#4CD964" />
-                  <ThemedText style={styles.collectionName}>Music</ThemedText>
+                  <ThemedText style={[styles.collectionName, profileTheme && { color: profileTheme.textColor }]}>Music</ThemedText>
                 </TouchableOpacity>
                 <TouchableOpacity 
-                  style={[styles.collectionCard, { backgroundColor: theme.backgroundElement }]}
+                  style={[styles.collectionCard, { backgroundColor: cardBg, borderColor: cardBorder, borderWidth: cardBorderWidth }]}
                   activeOpacity={0.7}
                   onPress={() => router.push({ pathname: '/bookcollections', params: { userId: profile.id } })}
                 >
                   <Ionicons name="book" size={24} color="#5856D6" />
-                  <ThemedText style={styles.collectionName}>Books</ThemedText>
+                  <ThemedText style={[styles.collectionName, profileTheme && { color: profileTheme.textColor }]}>Books</ThemedText>
                 </TouchableOpacity>
                 <TouchableOpacity 
-                  style={[styles.collectionCard, { backgroundColor: theme.backgroundElement }]}
+                  style={[styles.collectionCard, { backgroundColor: cardBg, borderColor: cardBorder, borderWidth: cardBorderWidth }]}
                   activeOpacity={0.7}
                   onPress={() => router.push({ pathname: '/sportscollections', params: { userId: profile.id } })}
                 >
                   <Ionicons name="trophy" size={24} color="#FF9500" />
-                  <ThemedText style={styles.collectionName}>Sports</ThemedText>
+                  <ThemedText style={[styles.collectionName, profileTheme && { color: profileTheme.textColor }]}>Sports</ThemedText>
                 </TouchableOpacity>
                 <TouchableOpacity 
-                  style={[styles.collectionCard, { backgroundColor: theme.backgroundElement }]}
+                  style={[styles.collectionCard, { backgroundColor: cardBg, borderColor: cardBorder, borderWidth: cardBorderWidth }]}
                   activeOpacity={0.7}
                   onPress={() => router.push({ pathname: '/vehiclecollections', params: { userId: profile.id } })}
                 >
                   <Ionicons name="car" size={24} color="#5856D6" />
-                  <ThemedText style={styles.collectionName}>Vehicles</ThemedText>
+                  <ThemedText style={[styles.collectionName, profileTheme && { color: profileTheme.textColor }]}>Vehicles</ThemedText>
                 </TouchableOpacity>
                 <TouchableOpacity 
-                  style={[styles.collectionCard, { backgroundColor: theme.backgroundElement }]}
+                  style={[styles.collectionCard, { backgroundColor: cardBg, borderColor: cardBorder, borderWidth: cardBorderWidth }]}
                   activeOpacity={0.7}
                   onPress={() => router.push({ pathname: '/gamescollections', params: { userId: profile.id } })}
                 >
                   <Ionicons name="game-controller" size={24} color="#4CD964" />
-                  <ThemedText style={styles.collectionName}>Games</ThemedText>
+                  <ThemedText style={[styles.collectionName, profileTheme && { color: profileTheme.textColor }]}>Games</ThemedText>
                 </TouchableOpacity>
                 <TouchableOpacity 
-                  style={[styles.collectionCard, { backgroundColor: theme.backgroundElement }]}
+                  style={[styles.collectionCard, { backgroundColor: cardBg, borderColor: cardBorder, borderWidth: cardBorderWidth }]}
                   activeOpacity={0.7}
                   onPress={() => router.push({ pathname: '/foodcollections', params: { userId: profile.id } })}
                 >
                   <Ionicons name="restaurant" size={24} color="#FF2D55" />
-                  <ThemedText style={styles.collectionName}>Food</ThemedText>
+                  <ThemedText style={[styles.collectionName, profileTheme && { color: profileTheme.textColor }]}>Food</ThemedText>
                 </TouchableOpacity>
                 <TouchableOpacity 
-                  style={[styles.collectionCard, { backgroundColor: theme.backgroundElement }]}
+                  style={[styles.collectionCard, { backgroundColor: cardBg, borderColor: cardBorder, borderWidth: cardBorderWidth }]}
                   activeOpacity={0.7}
                   onPress={() => router.push({ pathname: '/placescollections', params: { userId: profile.id } })}
                 >
                   <Ionicons name="map" size={24} color="#5AC8FA" />
-                  <ThemedText style={styles.collectionName}>Places</ThemedText>
+                  <ThemedText style={[styles.collectionName, profileTheme && { color: profileTheme.textColor }]}>Places</ThemedText>
                 </TouchableOpacity>
               </View>
             ) : (
-              <ThemedView style={[styles.privacyNotice, { backgroundColor: theme.backgroundElement }]}>
-                <Ionicons name="lock-closed" size={24} color={theme.textSecondary} />
-                <ThemedText style={styles.privacyNoticeText}>This user's collections are private.</ThemedText>
-              </ThemedView>
+              <View style={[styles.privacyNotice, { backgroundColor: cardBg, borderColor: cardBorder, borderWidth: cardBorderWidth }]}>
+                <Ionicons name="lock-closed" size={24} color={profileTheme ? profileTheme.textSecondaryColor : theme.textSecondary} />
+                <ThemedText style={[styles.privacyNoticeText, profileTheme && { color: profileTheme.textSecondaryColor }]}>This user's collections are private.</ThemedText>
+              </View>
             )}
           </View>
         </ScrollView>
       </SafeAreaView>
-    </ThemedView>
+    </ProfileThemeBackground>
   );
 }
 

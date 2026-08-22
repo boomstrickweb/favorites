@@ -13,6 +13,8 @@ import { supabase } from '@/lib/supabase';
 import { Spacing, MaxContentWidth } from '@/constants/theme';
 import { BADGES, BADGE_STORAGE_KEY } from '../selectbadge';
 import { UserBadge } from '@/components/user-badge';
+import { ProfileThemeBackground } from '@/components/profile-theme-background';
+import { getProfileTheme } from '@/constants/profile-themes';
 
 interface UserProfile {
   id: string;
@@ -29,6 +31,7 @@ interface UserProfile {
   follower_count?: number;
   following_count?: number;
   profile_badge?: string | null;
+  selected_theme?: string | null;
 }
 
 export default function ProfileScreen() {
@@ -37,6 +40,13 @@ export default function ProfileScreen() {
   const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [giftCount, setGiftCount] = useState(0);
+  const [localTheme, setLocalTheme] = useState<string | null>(null);
+
+  useEffect(() => {
+    AsyncStorage.getItem('user-profile-theme').then((val) => {
+      if (val) setLocalTheme(val);
+    });
+  }, []);
 
   const fetchProfile = useCallback(async () => {
     try {
@@ -61,6 +71,9 @@ export default function ProfileScreen() {
           }
         } else {
           setProfile(data);
+          if (data?.selected_theme) {
+            setLocalTheme(data.selected_theme);
+          }
         }
 
         // Fetch gift count
@@ -135,6 +148,12 @@ export default function ProfileScreen() {
   };
 
 
+  const activeThemeId = profile?.selected_theme || localTheme;
+  const profileTheme = getProfileTheme(activeThemeId);
+  const cardBg = profileTheme ? profileTheme.cardBg : theme.backgroundElement;
+  const cardBorder = profileTheme ? profileTheme.cardBorder : 'transparent';
+  const cardBorderWidth = profileTheme ? 1 : 0;
+
   if (loading) {
     return (
       <ThemedView style={[styles.container, styles.centered]}>
@@ -144,191 +163,195 @@ export default function ProfileScreen() {
   }
 
   return (
-    <ThemedView style={styles.container}>
+    <ProfileThemeBackground themeId={activeThemeId} style={styles.container}>
       <SafeAreaView style={styles.safeArea} edges={['top']}>
         <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
           <View style={styles.header}>
             <View style={styles.profileInfo}>
-              <View style={[styles.avatar, { backgroundColor: theme.backgroundElement }]}>{profile?.avatar_url ? (
+              <View style={[styles.avatar, { backgroundColor: cardBg, borderColor: cardBorder, borderWidth: cardBorderWidth }]}>{profile?.avatar_url ? (
                   <Image source={{ uri: profile.avatar_url }} style={styles.avatarImage} />
                 ) : (
-                  <Ionicons name="person" size={40} color={theme.textSecondary} />
+                  <Ionicons name="person" size={40} color={profileTheme ? profileTheme.textColor : theme.textSecondary} />
                 )}</View>
               <View style={styles.nameContainer}>
                 <View style={styles.usernameRow}>
-                  <ThemedText type="defaultSemiBold" style={styles.username} numberOfLines={1}>{profile?.full_name || profile?.username}</ThemedText>
+                  <ThemedText type="defaultSemiBold" style={[styles.username, profileTheme && { color: profileTheme.textColor }]} numberOfLines={1}>{profile?.full_name || profile?.username}</ThemedText>
                   <UserBadge badgeId={profile?.profile_badge} size={Platform.OS === 'web' ? 32 : 28} />
                 </View>
-                {profile?.full_name ? <ThemedText style={styles.handle} numberOfLines={1}>@{profile.username}</ThemedText> : null}
+                {profile?.full_name ? <ThemedText style={[styles.handle, profileTheme && { color: profileTheme.textSecondaryColor }]} numberOfLines={1}>@{profile.username}</ThemedText> : null}
               </View>
             </View>
           </View>
 
           <View style={styles.actionButtons}>
             <TouchableOpacity 
-              style={[styles.editButton, { backgroundColor: theme.backgroundElement, flex: 1 }]}
+              style={[styles.editButton, { backgroundColor: cardBg, borderColor: cardBorder, borderWidth: cardBorderWidth, flex: 1 }]}
               activeOpacity={0.7}
               onPress={() => router.push('/editprofile')}
             >
-              <ThemedText style={styles.editButtonText}>Edit Profile</ThemedText>
+              <ThemedText style={[styles.editButtonText, profileTheme && { color: profileTheme.textColor }]}>Edit Profile</ThemedText>
             </TouchableOpacity>
             <TouchableOpacity 
-              style={[styles.editButton, { backgroundColor: theme.brand, flex: 1, marginLeft: Spacing.two }]}
+              style={[styles.editButton, { backgroundColor: profileTheme ? profileTheme.primaryColor : theme.brand, flex: 1, marginLeft: Spacing.two }]}
               activeOpacity={0.7}
               onPress={() => router.push('/findsoulmate')}
             >
-              <ThemedText style={[styles.editButtonText, { color: '#fff' }]}>Find Soulmate</ThemedText>
+              <ThemedText style={[styles.editButtonText, { color: profileTheme ? '#000' : '#fff' }]}>Find Soulmate</ThemedText>
             </TouchableOpacity>
           </View>
 
-          {profile?.bio ? <View style={styles.bioContainer}><ThemedText style={styles.bioText}>{profile.bio}</ThemedText></View> : null}
+          {profile?.bio ? (
+            <View style={[styles.bioContainer, profileTheme && { backgroundColor: cardBg, borderColor: cardBorder, borderWidth: cardBorderWidth, padding: Spacing.three, borderRadius: 14 }]}>
+              <ThemedText style={[styles.bioText, profileTheme && { color: profileTheme.textColor }]}>{profile.bio}</ThemedText>
+            </View>
+          ) : null}
 
           {profile?.interests && profile.interests.length > 0 ? (
             <View style={styles.interestsContainer}>
               {profile.interests.map((interest) => (
                 <View 
                   key={interest} 
-                  style={[styles.interestChip, { backgroundColor: theme.backgroundElement }]}
+                  style={[styles.interestChip, { backgroundColor: cardBg, borderColor: cardBorder, borderWidth: cardBorderWidth }]}
                 >
                   <Ionicons 
                     name={interestIcons[interest] || 'star'} 
                     size={14} 
-                    color={theme.textSecondary} 
+                    color={profileTheme ? profileTheme.primaryColor : theme.textSecondary} 
                     style={{ marginRight: 6 }}
                   />
-                  <ThemedText style={styles.interestText}>{interest}</ThemedText>
+                  <ThemedText style={[styles.interestText, profileTheme && { color: profileTheme.textColor }]}>{interest}</ThemedText>
                 </View>
               ))}
             </View>
           ) : null}
 
           <View style={styles.socialContainer}>{profile?.instagram_url ? (
-              <TouchableOpacity style={styles.socialIcon} activeOpacity={0.7}>
-                <Ionicons name="logo-instagram" size={24} color={theme.text} />
+              <TouchableOpacity style={[styles.socialIcon, profileTheme && { backgroundColor: cardBg, borderColor: cardBorder, borderWidth: cardBorderWidth, padding: 8, borderRadius: 20 }]} activeOpacity={0.7}>
+                <Ionicons name="logo-instagram" size={24} color={profileTheme ? profileTheme.textColor : theme.text} />
               </TouchableOpacity>
             ) : null}{profile?.facebook_url ? (
-              <TouchableOpacity style={styles.socialIcon} activeOpacity={0.7}>
-                <Ionicons name="logo-facebook" size={24} color={theme.text} />
+              <TouchableOpacity style={[styles.socialIcon, profileTheme && { backgroundColor: cardBg, borderColor: cardBorder, borderWidth: cardBorderWidth, padding: 8, borderRadius: 20 }]} activeOpacity={0.7}>
+                <Ionicons name="logo-facebook" size={24} color={profileTheme ? profileTheme.textColor : theme.text} />
               </TouchableOpacity>
             ) : null}{profile?.x_url ? (
-              <TouchableOpacity style={styles.socialIcon} activeOpacity={0.7}>
-                <Ionicons name="logo-twitter" size={24} color={theme.text} />
+              <TouchableOpacity style={[styles.socialIcon, profileTheme && { backgroundColor: cardBg, borderColor: cardBorder, borderWidth: cardBorderWidth, padding: 8, borderRadius: 20 }]} activeOpacity={0.7}>
+                <Ionicons name="logo-twitter" size={24} color={profileTheme ? profileTheme.textColor : theme.text} />
               </TouchableOpacity>
             ) : null}{profile?.pinterest_url ? (
-              <TouchableOpacity style={styles.socialIcon} activeOpacity={0.7}>
-                <Ionicons name="logo-pinterest" size={24} color={theme.text} />
+              <TouchableOpacity style={[styles.socialIcon, profileTheme && { backgroundColor: cardBg, borderColor: cardBorder, borderWidth: cardBorderWidth, padding: 8, borderRadius: 20 }]} activeOpacity={0.7}>
+                <Ionicons name="logo-pinterest" size={24} color={profileTheme ? profileTheme.textColor : theme.text} />
               </TouchableOpacity>
             ) : null}{profile?.snapchat_url ? (
-              <TouchableOpacity style={styles.socialIcon} activeOpacity={0.7}>
-                <Ionicons name="logo-snapchat" size={24} color={theme.text} />
+              <TouchableOpacity style={[styles.socialIcon, profileTheme && { backgroundColor: cardBg, borderColor: cardBorder, borderWidth: cardBorderWidth, padding: 8, borderRadius: 20 }]} activeOpacity={0.7}>
+                <Ionicons name="logo-snapchat" size={24} color={profileTheme ? profileTheme.textColor : theme.text} />
               </TouchableOpacity>
             ) : null}</View>
 
-          <View style={styles.statsContainer}>
+          <View style={[styles.statsContainer, profileTheme && { backgroundColor: cardBg, borderColor: cardBorder, borderWidth: cardBorderWidth, borderRadius: 16 }]}>
             <TouchableOpacity 
               style={styles.statItem}
               onPress={() => router.push('/profile/gifts')}
             >
-              <ThemedText type="defaultSemiBold">{giftCount}</ThemedText>
-              <ThemedText style={styles.statLabel}>Gifts</ThemedText>
+              <ThemedText type="defaultSemiBold" style={profileTheme && { color: profileTheme.textColor }}>{giftCount}</ThemedText>
+              <ThemedText style={[styles.statLabel, profileTheme && { color: profileTheme.textSecondaryColor }]}>Gifts</ThemedText>
             </TouchableOpacity>
             <View style={styles.statDivider} />
             <TouchableOpacity 
               style={styles.statItem}
               onPress={() => profile && router.push({ pathname: '/following', params: { userId: profile.id } })}
             >
-              <ThemedText type="defaultSemiBold">{profile?.following_count || 0}</ThemedText>
-              <ThemedText style={styles.statLabel}>Following</ThemedText>
+              <ThemedText type="defaultSemiBold" style={profileTheme && { color: profileTheme.textColor }}>{profile?.following_count || 0}</ThemedText>
+              <ThemedText style={[styles.statLabel, profileTheme && { color: profileTheme.textSecondaryColor }]}>Following</ThemedText>
             </TouchableOpacity>
             <View style={styles.statDivider} />
             <TouchableOpacity 
               style={styles.statItem}
               onPress={() => profile && router.push({ pathname: '/followers', params: { userId: profile.id } })}
             >
-              <ThemedText type="defaultSemiBold">{profile?.follower_count || 0}</ThemedText>
-              <ThemedText style={styles.statLabel}>Followers</ThemedText>
+              <ThemedText type="defaultSemiBold" style={profileTheme && { color: profileTheme.textColor }}>{profile?.follower_count || 0}</ThemedText>
+              <ThemedText style={[styles.statLabel, profileTheme && { color: profileTheme.textSecondaryColor }]}>Followers</ThemedText>
             </TouchableOpacity>
           </View>
 
           <View style={styles.section}>
-            <ThemedText type="defaultSemiBold" style={styles.sectionTitle}>My Collections</ThemedText>
+            <ThemedText type="defaultSemiBold" style={[styles.sectionTitle, profileTheme && { color: profileTheme.textColor }]}>My Collections</ThemedText>
             <View style={styles.collectionsGrid}>
               <TouchableOpacity 
-                style={[styles.collectionCard, { backgroundColor: theme.backgroundElement }]}
+                style={[styles.collectionCard, { backgroundColor: cardBg, borderColor: cardBorder, borderWidth: cardBorderWidth }]}
                 activeOpacity={0.7}
                 onPress={() => router.push('/moviecollections')}
               >
-                <Ionicons name="film" size={24} color={theme.brand} />
-                <ThemedText style={styles.collectionName}>Movies</ThemedText>
+                <Ionicons name="film" size={24} color={profileTheme ? profileTheme.primaryColor : theme.brand} />
+                <ThemedText style={[styles.collectionName, profileTheme && { color: profileTheme.textColor }]}>Movies</ThemedText>
               </TouchableOpacity>
               <TouchableOpacity 
-                style={[styles.collectionCard, { backgroundColor: theme.backgroundElement }]}
+                style={[styles.collectionCard, { backgroundColor: cardBg, borderColor: cardBorder, borderWidth: cardBorderWidth }]}
                 activeOpacity={0.7}
                 onPress={() => router.push('/musiccollections')}
               >
                 <Ionicons name="musical-notes" size={24} color="#4CD964" />
-                <ThemedText style={styles.collectionName}>Music</ThemedText>
+                <ThemedText style={[styles.collectionName, profileTheme && { color: profileTheme.textColor }]}>Music</ThemedText>
               </TouchableOpacity>
               <TouchableOpacity 
-                style={[styles.collectionCard, { backgroundColor: theme.backgroundElement }]}
+                style={[styles.collectionCard, { backgroundColor: cardBg, borderColor: cardBorder, borderWidth: cardBorderWidth }]}
                 activeOpacity={0.7}
                 onPress={() => router.push('/bookcollections')}
               >
                 <Ionicons name="book" size={24} color="#5856D6" />
-                <ThemedText style={styles.collectionName}>Books</ThemedText>
+                <ThemedText style={[styles.collectionName, profileTheme && { color: profileTheme.textColor }]}>Books</ThemedText>
               </TouchableOpacity>
               <TouchableOpacity 
-                style={[styles.collectionCard, { backgroundColor: theme.backgroundElement }]}
+                style={[styles.collectionCard, { backgroundColor: cardBg, borderColor: cardBorder, borderWidth: cardBorderWidth }]}
                 activeOpacity={0.7}
                 onPress={() => router.push('/sportscollections')}
               >
                 <Ionicons name="trophy" size={24} color="#FF9500" />
-                <ThemedText style={styles.collectionName}>Sports</ThemedText>
+                <ThemedText style={[styles.collectionName, profileTheme && { color: profileTheme.textColor }]}>Sports</ThemedText>
               </TouchableOpacity>
               <TouchableOpacity 
-                style={[styles.collectionCard, { backgroundColor: theme.backgroundElement }]}
+                style={[styles.collectionCard, { backgroundColor: cardBg, borderColor: cardBorder, borderWidth: cardBorderWidth }]}
                 activeOpacity={0.7}
                 onPress={() => router.push('/vehiclecollections')}
               >
                 <Ionicons name="car" size={24} color="#5856D6" />
-                <ThemedText style={styles.collectionName}>Vehicles</ThemedText>
+                <ThemedText style={[styles.collectionName, profileTheme && { color: profileTheme.textColor }]}>Vehicles</ThemedText>
               </TouchableOpacity>
               <TouchableOpacity 
-                style={[styles.collectionCard, { backgroundColor: theme.backgroundElement }]}
+                style={[styles.collectionCard, { backgroundColor: cardBg, borderColor: cardBorder, borderWidth: cardBorderWidth }]}
                 activeOpacity={0.7}
                 onPress={() => router.push('/gamescollections')}
               >
                 <Ionicons name="game-controller" size={24} color="#4CD964" />
-                <ThemedText style={styles.collectionName}>Games</ThemedText>
+                <ThemedText style={[styles.collectionName, profileTheme && { color: profileTheme.textColor }]}>Games</ThemedText>
               </TouchableOpacity>
               <TouchableOpacity 
-                style={[styles.collectionCard, { backgroundColor: theme.backgroundElement }]}
+                style={[styles.collectionCard, { backgroundColor: cardBg, borderColor: cardBorder, borderWidth: cardBorderWidth }]}
                 activeOpacity={0.7}
                 onPress={() => router.push('/foodcollections')}
               >
                 <Ionicons name="restaurant" size={24} color="#FF2D55" />
-                <ThemedText style={styles.collectionName}>Food</ThemedText>
+                <ThemedText style={[styles.collectionName, profileTheme && { color: profileTheme.textColor }]}>Food</ThemedText>
               </TouchableOpacity>
               <TouchableOpacity 
-                style={[styles.collectionCard, { backgroundColor: theme.backgroundElement }]}
+                style={[styles.collectionCard, { backgroundColor: cardBg, borderColor: cardBorder, borderWidth: cardBorderWidth }]}
                 activeOpacity={0.7}
                 onPress={() => router.push('/placescollections')}
               >
                 <Ionicons name="map" size={24} color="#5AC8FA" />
-                <ThemedText style={styles.collectionName}>Places</ThemedText>
+                <ThemedText style={[styles.collectionName, profileTheme && { color: profileTheme.textColor }]}>Places</ThemedText>
               </TouchableOpacity>
             </View>
           </View>
 
-          <View style={styles.section}>
+          <View style={[styles.section, profileTheme && { backgroundColor: cardBg, borderColor: cardBorder, borderWidth: cardBorderWidth, borderRadius: 16, paddingHorizontal: Spacing.three }]}>
             <TouchableOpacity 
-              style={[styles.menuItem, { borderBottomWidth: 1, borderBottomColor: theme.backgroundSelected }]}
+              style={[styles.menuItem, { borderBottomWidth: 1, borderBottomColor: profileTheme ? cardBorder : theme.backgroundSelected }]}
               activeOpacity={0.7}
               onPress={() => router.push('/settings')}
             >
-              <Ionicons name="settings-outline" size={22} color={theme.text} />
-              <ThemedText style={styles.menuItemText}>Settings</ThemedText>
-              <Ionicons name="chevron-forward" size={20} color={theme.textSecondary} />
+              <Ionicons name="settings-outline" size={22} color={profileTheme ? profileTheme.textColor : theme.text} />
+              <ThemedText style={[styles.menuItemText, profileTheme && { color: profileTheme.textColor }]}>Settings</ThemedText>
+              <Ionicons name="chevron-forward" size={20} color={profileTheme ? profileTheme.textSecondaryColor : theme.textSecondary} />
             </TouchableOpacity>
             <TouchableOpacity 
               style={styles.menuItem}
@@ -337,12 +360,12 @@ export default function ProfileScreen() {
             >
               <Ionicons name="log-out-outline" size={22} color={theme.brand} />
               <ThemedText style={[styles.menuItemText, { color: theme.brand }]}>Sign Out</ThemedText>
-              <Ionicons name="chevron-forward" size={20} color={theme.textSecondary} />
+              <Ionicons name="chevron-forward" size={20} color={profileTheme ? profileTheme.textSecondaryColor : theme.textSecondary} />
             </TouchableOpacity>
           </View>
         </ScrollView>
       </SafeAreaView>
-    </ThemedView>
+    </ProfileThemeBackground>
   );
 }
 

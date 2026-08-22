@@ -1,5 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, TouchableOpacity, View, ScrollView, FlatList, Alert, Platform, ActivityIndicator } from 'react-native';
+import {
+  StyleSheet,
+  TouchableOpacity,
+  View,
+  FlatList,
+  Alert,
+  Platform,
+  ActivityIndicator,
+  Modal,
+} from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -8,56 +17,73 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useTheme } from '@/hooks/use-theme';
-import { Spacing, MaxContentWidth, Colors, ThemeType } from '@/constants/theme';
+import { Spacing, MaxContentWidth } from '@/constants/theme';
+import { PROFILE_THEMES, ProfileTheme, getProfileTheme } from '@/constants/profile-themes';
+import { ProfileThemeBackground } from '@/components/profile-theme-background';
 import { supabase } from '@/lib/supabase';
 
-const THEMES: { id: ThemeType | 'system'; name: string; description: string }[] = [
-  { id: 'system', name: 'Default', description: 'Follow system appearance' },
-  { id: 'cinema', name: 'Cinema', description: 'Red carpet dark mode' },
-  { id: 'library', name: 'Library', description: 'Classic paper & ink' },
-  { id: 'vinyl', name: 'Vinyl', description: 'Deep groove black & green' },
-  { id: 'arcade', name: 'Arcade', description: '8-bit neon glow' },
-  { id: 'garage', name: 'Garage', description: 'Industrial grey & amber' },
-  { id: 'atlas', name: 'Atlas', description: 'Map-inspired clean blue' },
-  { id: 'kitchen', name: 'Kitchen', description: 'Crisp & clean emerald' },
-  { id: 'stadium', name: 'Stadium', description: 'Pitch green & trophy gold' },
-  { id: 'titanium', name: 'Titanium', description: 'Sleek metal finish' },
-  { id: 'cosmic', name: 'Cosmic', description: 'Deep space purple' },
+const THEMES_LIST: Array<{
+  id: string;
+  name: string;
+  description: string;
+  animationLabel: string;
+}> = [
+  {
+    id: 'default',
+    name: 'Default',
+    description: 'Clean standard background without animation',
+    animationLabel: 'Standard',
+  },
+  ...PROFILE_THEMES.map((t) => ({
+    id: t.id,
+    name: t.name,
+    description: t.description,
+    animationLabel: t.animationLabel,
+  })),
 ];
 
 export default function SelectThemeScreen() {
   const theme = useTheme();
   const router = useRouter();
-  const [selectedThemeId, setSelectedThemeId] = useState<ThemeType | 'system'>('system');
+  const [selectedThemeId, setSelectedThemeId] = useState<string>('default');
   const [loading, setLoading] = useState(true);
+  const [savingId, setSavingId] = useState<string | null>(null);
+  const [previewThemeId, setPreviewThemeId] = useState<string | null>(null);
 
   useEffect(() => {
     const loadSelectedTheme = async () => {
       try {
         setLoading(true);
         // Try DB first
-        const { data: { user } } = await supabase.auth.getUser();
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
         if (user) {
           const { data, error } = await supabase
             .from('profiles')
             .select('selected_theme')
             .eq('id', user.id)
             .single();
-          
+
           if (data?.selected_theme) {
-            setSelectedThemeId(data.selected_theme as ThemeType | 'system');
+            setSelectedThemeId(data.selected_theme);
             setLoading(false);
             return;
           }
         }
 
         // Fallback to AsyncStorage
-        const savedTheme = await AsyncStorage.getItem('user-theme');
+        const savedTheme = await AsyncStorage.getItem('user-profile-theme');
         if (savedTheme) {
-          setSelectedThemeId(savedTheme as ThemeType | 'system');
+          setSelectedThemeId(savedTheme);
+        } else {
+          const legacyTheme = await AsyncStorage.getItem('user-theme');
+          if (legacyTheme) {
+            setSelectedThemeId(legacyTheme);
+          }
         }
       } catch (error) {
-        console.error('Error loading theme:', error);
+        console.error('Error loading profile theme:', error);
       } finally {
         setLoading(false);
       }
@@ -73,74 +99,138 @@ export default function SelectThemeScreen() {
     }
   };
 
-  const handleSelectTheme = async (id: ThemeType | 'system') => {
+  const handleSelectTheme = async (id: string) => {
     try {
-      if (id === 'system') {
-        await AsyncStorage.removeItem('user-theme');
-      } else {
-        await AsyncStorage.setItem('user-theme', id);
-      }
+      setSavingId(id);
       setSelectedThemeId(id);
 
-      // Save to DB for premium users
-      const { data: { user } } = await supabase.auth.getUser();
+      if (id === 'default' || id === 'system') {
+        await AsyncStorage.removeItem('user-profile-theme');
+        await AsyncStorage.removeItem('user-theme');
+      } else {
+        await AsyncStorage.setItem('user-profile-theme', id);
+        await AsyncStorage.setItem('user-theme', id);
+      }
+
+      // Save to DB for user
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (user) {
         await supabase
           .from('profiles')
           .update({ selected_theme: id })
           .eq('id', user.id);
       }
-      
+
+      const targetTheme = id === 'default' ? null : getProfileTheme(id);
+      const title = 'Profile Theme Updated';
+      const msg = targetTheme
+        ? `"${targetTheme.name}" animation is now live on your profile!`
+        : 'Default profile background restored.';
+
       if (Platform.OS === 'web') {
-        window.location.reload(); // Hard refresh to apply theme globally via useTheme hook
+        // Subtle alert or continue
       } else {
-        Alert.alert('Theme Updated', 'Please restart the app to see full changes if they don\'t appear immediately.', [
-          { text: 'OK', onPress: () => router.replace('/settings') }
-        ]);
+        Alert.alert(title, msg, [{ text: 'OK' }]);
       }
     } catch (e) {
-      console.error('Failed to save theme', e);
+      console.error('Failed to save profile theme', e);
+      Alert.alert('Error', 'Failed to save theme. Please try again.');
+    } finally {
+      setSavingId(null);
     }
   };
 
-  const renderThemeItem = ({ item }: { item: typeof THEMES[0] }) => {
+  const renderThemeItem = ({ item }: { item: (typeof THEMES_LIST)[0] }) => {
     const isSelected = selectedThemeId === item.id;
-    const previewColors = item.id === 'system' ? Colors.light : Colors[item.id as ThemeType];
+    const isDefault = item.id === 'default' || item.id === 'system';
+    const profileTheme = getProfileTheme(item.id);
 
     return (
       <TouchableOpacity
         style={[
           styles.themeItem,
-          { backgroundColor: theme.backgroundElement },
-          isSelected && { borderColor: theme.brand, borderWidth: 2 }
+          {
+            backgroundColor: theme.backgroundElement,
+            borderColor: isSelected ? theme.brand : theme.border,
+            borderWidth: isSelected ? 2 : 1,
+          },
         ]}
         onPress={() => handleSelectTheme(item.id)}
-        activeOpacity={0.7}
+        activeOpacity={0.8}
       >
-        <View style={[styles.previewContainer, { backgroundColor: previewColors.background }]}>
-          <View style={[styles.previewElement, { backgroundColor: previewColors.brand }]} />
-          <View style={[styles.previewText, { backgroundColor: previewColors.text }]} />
-          <View style={[styles.previewText, { backgroundColor: previewColors.textSecondary, width: '60%' }]} />
+        {/* Animated Thumbnail Preview */}
+        <View style={styles.previewCardWrapper}>
+          {isDefault ? (
+            <View style={[styles.defaultPreview, { backgroundColor: theme.background }]}>
+              <Ionicons name="sparkles-outline" size={26} color={theme.textSecondary} />
+            </View>
+          ) : (
+            <ProfileThemeBackground themeId={item.id} isPreview={true} style={styles.animatedThumbnail}>
+              <View style={styles.thumbnailOverlay}>
+                <View
+                  style={[
+                    styles.thumbnailPill,
+                    {
+                      backgroundColor: profileTheme?.cardBg || 'rgba(0,0,0,0.6)',
+                      borderColor: profileTheme?.cardBorder || 'rgba(255,255,255,0.2)',
+                    },
+                  ]}
+                >
+                  <ThemedText style={styles.thumbnailPillText} numberOfLines={1}>
+                    {item.name}
+                  </ThemedText>
+                </View>
+              </View>
+            </ProfileThemeBackground>
+          )}
+
+          {/* Full-screen preview button */}
+          {!isDefault && (
+            <TouchableOpacity
+              style={styles.expandButton}
+              onPress={() => setPreviewThemeId(item.id)}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Ionicons name="expand" size={14} color="#FFF" />
+            </TouchableOpacity>
+          )}
+
+          {isSelected && (
+            <View style={[styles.selectedIndicator, { backgroundColor: theme.brand }]}>
+              <Ionicons name="checkmark" size={14} color="#FFF" />
+            </View>
+          )}
         </View>
-        <ThemedText style={styles.themeName}>{item.name}</ThemedText>
-        <ThemedText style={styles.themeDescription}>{item.description}</ThemedText>
-        {isSelected && (
-          <View style={[styles.selectedIndicator, { backgroundColor: theme.brand }]}>
-            <Ionicons name="checkmark" size={16} color="#FFF" />
+
+        {/* Info */}
+        <View style={styles.themeInfo}>
+          <View style={styles.nameRow}>
+            <ThemedText type="defaultSemiBold" style={styles.themeName} numberOfLines={1}>
+              {item.name}
+            </ThemedText>
+            {savingId === item.id && <ActivityIndicator size="small" color={theme.brand} />}
           </View>
-        )}
+          <ThemedText style={styles.themeDescription} numberOfLines={2}>
+            {item.description}
+          </ThemedText>
+        </View>
       </TouchableOpacity>
     );
   };
 
+  const previewTheme = previewThemeId ? getProfileTheme(previewThemeId) : null;
+
   return (
     <ThemedView style={styles.container}>
       <SafeAreaView style={styles.safeArea} edges={['top']}>
+        {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity onPress={handleBack} style={styles.backButton}>
             <Ionicons name="chevron-back" size={28} color={theme.text} />
           </TouchableOpacity>
-          <ThemedText type="subtitle">Select Theme</ThemedText>
+          <ThemedText type="subtitle">Profile Themes</ThemedText>
           <View style={{ width: 28 }} />
         </View>
 
@@ -150,7 +240,7 @@ export default function SelectThemeScreen() {
           </View>
         ) : (
           <FlatList
-            data={THEMES}
+            data={THEMES_LIST}
             renderItem={renderThemeItem}
             keyExtractor={(item) => item.id}
             numColumns={2}
@@ -158,12 +248,82 @@ export default function SelectThemeScreen() {
             columnWrapperStyle={styles.columnWrapper}
             showsVerticalScrollIndicator={false}
             ListHeaderComponent={() => (
-              <ThemedText style={styles.description}>
-                Personalize your experience with one of our Premium themes.
-              </ThemedText>
+              <View style={styles.headerDescriptionBox}>
+                <ThemedText style={styles.descriptionTitle}>
+                  Animated Profile Backgrounds
+                </ThemedText>
+                <ThemedText style={styles.description}>
+                  Choose a live animated theme for your profile. Anyone visiting your profile will experience your customized animation!
+                </ThemedText>
+              </View>
             )}
           />
         )}
+
+        {/* Full-screen Theme Live Preview Modal */}
+        <Modal
+          visible={!!previewThemeId}
+          transparent={false}
+          animationType="fade"
+          onRequestClose={() => setPreviewThemeId(null)}
+        >
+          {previewThemeId && (
+            <ProfileThemeBackground themeId={previewThemeId} style={styles.modalBackground}>
+              <SafeAreaView style={styles.modalSafeArea}>
+                <View style={styles.modalHeader}>
+                  <TouchableOpacity
+                    style={styles.modalCloseButton}
+                    onPress={() => setPreviewThemeId(null)}
+                  >
+                    <Ionicons name="close" size={24} color="#FFF" />
+                  </TouchableOpacity>
+                  <ThemedText type="subtitle" style={{ color: '#FFF' }}>
+                    {previewTheme?.name}
+                  </ThemedText>
+                  <View style={{ width: 40 }} />
+                </View>
+
+                {/* Simulated Profile Glass Card */}
+                <View style={styles.modalCardContainer}>
+                  <View
+                    style={[
+                      styles.mockProfileCard,
+                      {
+                        backgroundColor: previewTheme?.cardBg || 'rgba(15, 20, 30, 0.85)',
+                        borderColor: previewTheme?.cardBorder || 'rgba(255, 255, 255, 0.2)',
+                      },
+                    ]}
+                  >
+                    <View style={styles.mockAvatar}>
+                      <Ionicons name="person" size={40} color={previewTheme?.primaryColor || '#FFF'} />
+                    </View>
+                    <ThemedText style={[styles.mockName, { color: previewTheme?.textColor || '#FFF' }]}>
+                      Profile Preview
+                    </ThemedText>
+                    <ThemedText style={[styles.mockDesc, { color: previewTheme?.textSecondaryColor || '#CCC' }]}>
+                      {previewTheme?.description}
+                    </ThemedText>
+
+                    <TouchableOpacity
+                      style={[
+                        styles.applyButton,
+                        { backgroundColor: previewTheme?.primaryColor || theme.brand },
+                      ]}
+                      onPress={() => {
+                        handleSelectTheme(previewThemeId);
+                        setPreviewThemeId(null);
+                      }}
+                    >
+                      <ThemedText style={styles.applyButtonText}>
+                        {selectedThemeId === previewThemeId ? 'Applied' : 'Apply Theme'}
+                      </ThemedText>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </SafeAreaView>
+            </ProfileThemeBackground>
+          )}
+        </Modal>
       </SafeAreaView>
     </ThemedView>
   );
@@ -191,74 +351,182 @@ const styles = StyleSheet.create({
   backButton: {
     padding: 4,
   },
+  centered: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   listContent: {
     padding: Spacing.four,
-    paddingBottom: Spacing.eight,
+    paddingBottom: Spacing.six,
   },
   columnWrapper: {
     justifyContent: 'space-between',
     marginBottom: Spacing.four,
   },
-  description: {
-    fontSize: 16,
-    opacity: 0.7,
-    marginBottom: Spacing.six,
+  headerDescriptionBox: {
+    marginBottom: Spacing.four,
+    alignItems: 'center',
+    paddingHorizontal: Spacing.two,
+  },
+  descriptionTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    marginBottom: 6,
     textAlign: 'center',
-    paddingHorizontal: Spacing.four,
+  },
+  description: {
+    fontSize: 14,
+    opacity: 0.75,
+    textAlign: 'center',
+    lineHeight: 20,
   },
   themeItem: {
     width: '48%',
     borderRadius: 16,
-    padding: Spacing.three,
-    alignItems: 'center',
-    position: 'relative',
-    borderWidth: 2,
-    borderColor: 'transparent',
+    overflow: 'hidden',
   },
-  previewContainer: {
+  previewCardWrapper: {
     width: '100%',
-    height: 80,
-    borderRadius: 8,
-    padding: 8,
-    marginBottom: Spacing.two,
+    height: 110,
+    position: 'relative',
+    backgroundColor: '#000',
+  },
+  defaultPreview: {
+    width: '100%',
+    height: '100%',
     justifyContent: 'center',
-    gap: 4,
+    alignItems: 'center',
   },
-  previewElement: {
-    width: 30,
-    height: 10,
-    borderRadius: 4,
+  animatedThumbnail: {
+    width: '100%',
+    height: '100%',
+  },
+  thumbnailOverlay: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    padding: 8,
+  },
+  thumbnailPill: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+    borderWidth: 1,
+    alignSelf: 'flex-start',
+  },
+  thumbnailPillText: {
+    color: '#FFF',
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  expandButton: {
+    position: 'absolute',
+    top: 6,
+    left: 6,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    borderRadius: 12,
+    padding: 5,
+    zIndex: 5,
+  },
+  selectedIndicator: {
+    position: 'absolute',
+    top: 6,
+    right: 6,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.5,
+    shadowRadius: 3,
+  },
+  themeInfo: {
+    padding: Spacing.three,
+  },
+  nameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     marginBottom: 4,
-  },
-  previewText: {
-    width: '80%',
-    height: 4,
-    borderRadius: 2,
   },
   themeName: {
     fontSize: 15,
     fontWeight: '600',
-    textAlign: 'center',
+    flex: 1,
   },
   themeDescription: {
-    fontSize: 11,
-    opacity: 0.6,
-    textAlign: 'center',
-    marginTop: 2,
+    fontSize: 12,
+    opacity: 0.7,
+    lineHeight: 16,
   },
-  selectedIndicator: {
-    position: 'absolute',
-    top: 8,
-    right: 8,
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    justifyContent: 'center',
+  modalBackground: {
+    flex: 1,
+  },
+  modalSafeArea: {
+    flex: 1,
+  },
+  modalHeader: {
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: Spacing.four,
+    paddingVertical: Spacing.three,
   },
-  centered: {
+  modalCloseButton: {
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    borderRadius: 20,
+    padding: 8,
+  },
+  modalCardContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    padding: Spacing.four,
+  },
+  mockProfileCard: {
+    width: '100%',
+    maxWidth: 380,
+    borderRadius: 24,
+    borderWidth: 1.5,
+    padding: Spacing.four,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.5,
+    shadowRadius: 20,
+  },
+  mockAvatar: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: Spacing.three,
+  },
+  mockName: {
+    fontSize: 22,
+    fontWeight: '700',
+    marginBottom: 6,
+  },
+  mockDesc: {
+    fontSize: 14,
+    textAlign: 'center',
+    marginBottom: Spacing.four,
+    lineHeight: 20,
+  },
+  applyButton: {
+    width: '100%',
+    paddingVertical: 14,
+    borderRadius: 14,
+    alignItems: 'center',
+  },
+  applyButtonText: {
+    color: '#000',
+    fontSize: 16,
+    fontWeight: '700',
   },
 });
