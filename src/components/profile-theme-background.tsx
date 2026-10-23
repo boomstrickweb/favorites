@@ -281,6 +281,73 @@ function initThemeState(themeId: string, w: number, h: number, isPreview: boolea
 
       return { embers, fogs, bats };
     }
+    case 'pumpkin_hollow': {
+      const wispCount = isPreview ? 12 : 28;
+      const wisps = Array.from({ length: wispCount }, () => ({
+        x: Math.random() * w,
+        y: Math.random() * h,
+        vx: (Math.random() - 0.5) * 18,
+        vy: -(Math.random() * 20 + 10),
+        size: Math.random() * 3.2 + 1.2,
+        life: Math.random() * 4,
+        maxLife: Math.random() * 3 + 3,
+        color: Math.random() > 0.45 ? '#00E676' : (Math.random() > 0.5 ? '#FF6D00' : '#A855F7'),
+      }));
+
+      const ghostCount = isPreview ? 2 : 4;
+      const ghosts = Array.from({ length: ghostCount }, (_, i) => ({
+        x: (w / (ghostCount + 1)) * (i + 1) + (Math.random() * 40 - 20),
+        y: h * (0.28 + Math.random() * 0.35),
+        baseY: h * (0.28 + Math.random() * 0.35),
+        speed: (i % 2 === 0 ? 1 : -1) * (14 + Math.random() * 8),
+        size: isPreview ? 18 : 28 + Math.random() * 10,
+        bobPhase: Math.random() * Math.PI * 2,
+        driftPhase: Math.random() * Math.PI * 2,
+        alpha: 0.35 + Math.random() * 0.25,
+      }));
+
+      return { wisps, ghosts };
+    }
+    case 'cursed_crypt': {
+      const ravenCount = isPreview ? 2 : 4;
+      const ravens = Array.from({ length: ravenCount }, (_, i) => ({
+        x: -40 - Math.random() * 180 - i * 120,
+        y: h * (0.1 + Math.random() * 0.3),
+        vx: 38 + Math.random() * 30,
+        vy: (Math.random() - 0.5) * 10,
+        wingCycle: Math.random() * Math.PI * 2,
+        size: isPreview ? 7 : 12 + Math.random() * 5,
+      }));
+
+      const mistCount = isPreview ? 3 : 6;
+      const mists = Array.from({ length: mistCount }, (_, i) => ({
+        x: Math.random() * w,
+        y: h * (0.55 + (i / mistCount) * 0.4),
+        radiusX: (isPreview ? 100 : 220) + Math.random() * 80,
+        radiusY: (isPreview ? 30 : 60) + Math.random() * 25,
+        speed: (i % 2 === 0 ? 1 : -1) * (10 + Math.random() * 8),
+        opacity: 0.08 + Math.random() * 0.08,
+      }));
+
+      const fireflyCount = isPreview ? 6 : 14;
+      const fireflies = Array.from({ length: fireflyCount }, () => ({
+        x: Math.random() * w,
+        y: h * (0.6 + Math.random() * 0.35),
+        vx: (Math.random() - 0.5) * 10,
+        vy: -(Math.random() * 8 + 4),
+        size: Math.random() * 2.2 + 0.8,
+        life: Math.random() * 4,
+        maxLife: Math.random() * 3 + 3,
+      }));
+
+      return {
+        ravens,
+        mists,
+        fireflies,
+        nextLightning: 4 + Math.random() * 6,
+        lightningAlpha: 0,
+      };
+    }
     default:
       return {};
   }
@@ -1199,6 +1266,490 @@ function drawThemeAnimation(
       break;
     }
 
+    case 'pumpkin_hollow': {
+      // 1. Spooky Midnight Forest Sky with Emerald & Amethyst Twilight Mist
+      const bgGrad = ctx.createLinearGradient(0, 0, 0, h);
+      bgGrad.addColorStop(0, '#040d08');
+      bgGrad.addColorStop(0.4, '#091c12');
+      bgGrad.addColorStop(0.75, '#120a22');
+      bgGrad.addColorStop(1, '#050a06');
+      ctx.fillStyle = bgGrad;
+      ctx.fillRect(0, 0, w, h);
+
+      // 2. Eerie Harvest Moon with Greenish-Amber Halo
+      const moonX = w * 0.22;
+      const moonY = isPreview ? h * 0.18 : h * 0.15;
+      const moonRadius = isPreview ? 24 : 42;
+      const pulseMoon = Math.sin(t * 1.8) * (isPreview ? 1.5 : 3);
+
+      const moonAura = ctx.createRadialGradient(moonX, moonY, moonRadius * 0.4, moonX, moonY, moonRadius * 2.6);
+      moonAura.addColorStop(0, 'rgba(0, 230, 118, 0.40)');
+      moonAura.addColorStop(0.5, 'rgba(255, 109, 0, 0.20)');
+      moonAura.addColorStop(0.8, 'rgba(156, 39, 176, 0.15)');
+      moonAura.addColorStop(1, 'rgba(0, 0, 0, 0)');
+      ctx.fillStyle = moonAura;
+      ctx.beginPath();
+      ctx.arc(moonX, moonY, (moonRadius + pulseMoon) * 2.6, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Moon Body
+      const moonBody = ctx.createRadialGradient(moonX - moonRadius * 0.3, moonY - moonRadius * 0.3, moonRadius * 0.1, moonX, moonY, moonRadius);
+      moonBody.addColorStop(0, '#E8FFE8');
+      moonBody.addColorStop(0.45, '#A7F3D0');
+      moonBody.addColorStop(0.85, '#FFD166');
+      moonBody.addColorStop(1, '#FF6D00');
+      ctx.fillStyle = moonBody;
+      ctx.shadowColor = '#00E676';
+      ctx.shadowBlur = isPreview ? 12 : 22;
+      ctx.beginPath();
+      ctx.arc(moonX, moonY, moonRadius + pulseMoon, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.shadowBlur = 0;
+
+      // 3. Spooky Twisted Tree Silhouettes at the sides
+      ctx.fillStyle = '#030805';
+      // Left gnarly branch
+      ctx.beginPath();
+      ctx.moveTo(0, h * 0.32);
+      ctx.quadraticCurveTo(w * 0.12, h * 0.28, w * 0.18, h * 0.20);
+      ctx.lineTo(w * 0.22, h * 0.21);
+      ctx.quadraticCurveTo(w * 0.14, h * 0.30, 0, h * 0.38);
+      ctx.fill();
+
+      // Right hanging branch
+      ctx.beginPath();
+      ctx.moveTo(w, h * 0.25);
+      ctx.quadraticCurveTo(w * 0.88, h * 0.22, w * 0.82, h * 0.14);
+      ctx.lineTo(w * 0.78, h * 0.15);
+      ctx.quadraticCurveTo(w * 0.86, h * 0.26, w, h * 0.32);
+      ctx.fill();
+
+      // Hanging Spiderweb on right branch
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.12)';
+      ctx.lineWidth = 0.8;
+      ctx.beginPath();
+      ctx.moveTo(w * 0.80, h * 0.15);
+      ctx.lineTo(w * 0.80, h * 0.23);
+      ctx.moveTo(w * 0.84, h * 0.18);
+      ctx.lineTo(w * 0.84, h * 0.24);
+      ctx.stroke();
+
+      // 4. Ground Mound Silhouette (Spooky pumpkin patch hills)
+      const hillBaseY = h * 0.82;
+      ctx.fillStyle = '#040906';
+      ctx.beginPath();
+      ctx.moveTo(0, hillBaseY + (isPreview ? 10 : 20));
+      ctx.quadraticCurveTo(w * 0.35, hillBaseY - 10, w * 0.65, hillBaseY + 5);
+      ctx.quadraticCurveTo(w * 0.85, hillBaseY + 12, w, hillBaseY);
+      ctx.lineTo(w, h);
+      ctx.lineTo(0, h);
+      ctx.closePath();
+      ctx.fill();
+
+      // 5. Glowing Jack-o'-Lantern Pumpkins at bottom
+      const pumpkinCount = isPreview ? 2 : 4;
+      const pumpkinWidths = [
+        { x: w * 0.18, y: hillBaseY + (isPreview ? 12 : 24), size: isPreview ? 22 : 36, flickerSpeed: 7 },
+        { x: w * 0.82, y: hillBaseY + (isPreview ? 10 : 20), size: isPreview ? 24 : 40, flickerSpeed: 9 },
+        { x: w * 0.48, y: hillBaseY + (isPreview ? 18 : 34), size: isPreview ? 20 : 32, flickerSpeed: 6 },
+        { x: w * 0.32, y: hillBaseY + (isPreview ? 22 : 42), size: isPreview ? 18 : 28, flickerSpeed: 11 },
+      ];
+
+      for (let pIdx = 0; pIdx < Math.min(pumpkinCount, pumpkinWidths.length); pIdx++) {
+        const p = pumpkinWidths[pIdx];
+        const px = p.x;
+        const py = p.y;
+        const ps = p.size;
+        const flicker = 0.75 + Math.sin(t * p.flickerSpeed) * 0.18 + Math.cos(t * (p.flickerSpeed * 1.5)) * 0.08;
+
+        // Pumpkin Body (Layered ribbed ovals)
+        ctx.fillStyle = '#220b02';
+        ctx.beginPath();
+        ctx.ellipse(px, py, ps * 0.95, ps * 0.72, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Pumpkin Outer Glow
+        const pGlow = ctx.createRadialGradient(px, py, ps * 0.1, px, py, ps * 1.6);
+        pGlow.addColorStop(0, `rgba(255, 109, 0, ${0.45 * flicker})`);
+        pGlow.addColorStop(0.5, `rgba(0, 230, 118, ${0.20 * flicker})`);
+        pGlow.addColorStop(1, 'rgba(0, 0, 0, 0)');
+        ctx.fillStyle = pGlow;
+        ctx.beginPath();
+        ctx.arc(px, py, ps * 1.6, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Pumpkin Stem
+        ctx.fillStyle = '#112211';
+        ctx.beginPath();
+        ctx.rect(px - ps * 0.1, py - ps * 0.85, ps * 0.2, ps * 0.25);
+        ctx.fill();
+
+        // Pumpkin Face Features (Glowing Carved Eyes & Creepy Jagged Smile)
+        ctx.fillStyle = `rgba(255, 170, 0, ${flicker})`;
+        ctx.shadowColor = '#FF6D00';
+        ctx.shadowBlur = isPreview ? 6 : 10;
+
+        // Left Eye (Triangle)
+        ctx.beginPath();
+        ctx.moveTo(px - ps * 0.42, py - ps * 0.18);
+        ctx.lineTo(px - ps * 0.18, py - ps * 0.18);
+        ctx.lineTo(px - ps * 0.30, py - ps * 0.42);
+        ctx.closePath();
+        ctx.fill();
+
+        // Right Eye (Triangle)
+        ctx.beginPath();
+        ctx.moveTo(px + ps * 0.18, py - ps * 0.18);
+        ctx.lineTo(px + ps * 0.42, py - ps * 0.18);
+        ctx.lineTo(px + ps * 0.30, py - ps * 0.42);
+        ctx.closePath();
+        ctx.fill();
+
+        // Nose (Tiny inverted triangle)
+        ctx.beginPath();
+        ctx.moveTo(px, py - ps * 0.15);
+        ctx.lineTo(px - ps * 0.08, py - ps * 0.02);
+        ctx.lineTo(px + ps * 0.08, py - ps * 0.02);
+        ctx.closePath();
+        ctx.fill();
+
+        // Sinister Jagged Smile
+        ctx.beginPath();
+        ctx.moveTo(px - ps * 0.55, py + ps * 0.12);
+        ctx.lineTo(px - ps * 0.35, py + ps * 0.30);
+        ctx.lineTo(px - ps * 0.20, py + ps * 0.18);
+        ctx.lineTo(px, py + ps * 0.34);
+        ctx.lineTo(px + ps * 0.20, py + ps * 0.18);
+        ctx.lineTo(px + ps * 0.35, py + ps * 0.30);
+        ctx.lineTo(px + ps * 0.55, py + ps * 0.12);
+        ctx.lineTo(px + ps * 0.35, py + ps * 0.22);
+        ctx.lineTo(px + ps * 0.18, py + ps * 0.10);
+        ctx.lineTo(px, py + ps * 0.24);
+        ctx.lineTo(px - ps * 0.18, py + ps * 0.10);
+        ctx.lineTo(px - ps * 0.35, py + ps * 0.22);
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.shadowBlur = 0;
+      }
+
+      // 6. Floating Translucent Spectral Spirits / Ghosts
+      if (state.ghosts) {
+        for (let g of state.ghosts) {
+          g.x += g.speed * dt;
+          if (g.x > w + 60) {
+            g.x = -60;
+          } else if (g.x < -60) {
+            g.x = w + 60;
+          }
+
+          const bob = Math.sin(t * 2 + g.bobPhase) * 12;
+          const gy = g.baseY + bob;
+          const gs = g.size;
+
+          ctx.save();
+          ctx.translate(g.x, gy);
+
+          // Ethereal Ghost Glow
+          const ghostGlow = ctx.createRadialGradient(0, 0, gs * 0.2, 0, 0, gs * 1.5);
+          ghostGlow.addColorStop(0, `rgba(167, 243, 208, ${g.alpha * 0.6})`);
+          ghostGlow.addColorStop(0.6, `rgba(0, 230, 118, ${g.alpha * 0.3})`);
+          ghostGlow.addColorStop(1, 'rgba(0, 0, 0, 0)');
+          ctx.fillStyle = ghostGlow;
+          ctx.beginPath();
+          ctx.arc(0, 0, gs * 1.5, 0, Math.PI * 2);
+          ctx.fill();
+
+          // Ghost Spectral Body Path
+          ctx.fillStyle = `rgba(235, 255, 245, ${g.alpha * 0.85})`;
+          ctx.shadowColor = '#00E676';
+          ctx.shadowBlur = isPreview ? 8 : 14;
+
+          const wave = Math.sin(t * 4 + g.driftPhase) * (gs * 0.2);
+
+          ctx.beginPath();
+          // Head dome
+          ctx.arc(0, -gs * 0.2, gs * 0.5, Math.PI, 0, false);
+          // Right flowing body edge
+          ctx.quadraticCurveTo(gs * 0.55, gs * 0.4, gs * 0.35 + wave, gs * 0.85);
+          // Flowing jagged tail ripples
+          ctx.quadraticCurveTo(gs * 0.15, gs * 0.65, 0, gs * 0.85 - wave);
+          ctx.quadraticCurveTo(-gs * 0.15, gs * 0.65, -gs * 0.35 - wave, gs * 0.85);
+          // Left flowing body edge
+          ctx.quadraticCurveTo(-gs * 0.55, gs * 0.4, -gs * 0.5, -gs * 0.2);
+          ctx.closePath();
+          ctx.fill();
+          ctx.shadowBlur = 0;
+
+          // Ghost Eerie Eyes
+          ctx.fillStyle = '#061a0f';
+          ctx.beginPath();
+          ctx.ellipse(-gs * 0.18, -gs * 0.22, gs * 0.09, gs * 0.14, -0.1, 0, Math.PI * 2);
+          ctx.ellipse(gs * 0.18, -gs * 0.22, gs * 0.09, gs * 0.14, 0.1, 0, Math.PI * 2);
+          ctx.fill();
+
+          // Cute spooky tiny open mouth
+          ctx.beginPath();
+          ctx.ellipse(0, -gs * 0.05, gs * 0.07, gs * 0.10, 0, 0, Math.PI * 2);
+          ctx.fill();
+
+          ctx.restore();
+        }
+      }
+
+      // 7. Swirling Witching Fireflies & Emerald Wisps
+      if (state.wisps) {
+        for (let wisp of state.wisps) {
+          wisp.y += wisp.vy * dt;
+          wisp.x += wisp.vx * dt + Math.sin(t * 2.5 + wisp.life) * 1.2;
+          wisp.life += dt;
+
+          if (wisp.life >= wisp.maxLife || wisp.y < -10) {
+            wisp.x = Math.random() * w;
+            wisp.y = h + Math.random() * 20;
+            wisp.life = 0;
+            wisp.vy = -(Math.random() * 20 + 10);
+          }
+
+          const progress = wisp.life / wisp.maxLife;
+          const alpha = progress < 0.2 ? progress / 0.2 : (1 - progress);
+
+          ctx.fillStyle = wisp.color;
+          ctx.shadowColor = wisp.color;
+          ctx.shadowBlur = 8;
+          ctx.globalAlpha = Math.max(0, Math.min(1, alpha));
+          ctx.beginPath();
+          ctx.arc(wisp.x, wisp.y, wisp.size, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.globalAlpha = 1.0;
+        ctx.shadowBlur = 0;
+      }
+      break;
+    }
+
+    case 'cursed_crypt': {
+      // 1. Deep Void Night Sky with Crimson-Violet Haze
+      const bgGrad = ctx.createLinearGradient(0, 0, 0, h);
+      bgGrad.addColorStop(0, '#05030A');
+      bgGrad.addColorStop(0.45, '#140414');
+      bgGrad.addColorStop(0.75, '#1C0710');
+      bgGrad.addColorStop(1, '#030205');
+      ctx.fillStyle = bgGrad;
+      ctx.fillRect(0, 0, w, h);
+
+      // Twinkling distant stars
+      ctx.fillStyle = 'rgba(214, 179, 255, 0.5)';
+      for (let i = 0; i < (isPreview ? 10 : 24); i++) {
+        const sx = (i * 97.3) % w;
+        const sy = (i * 53.7) % (h * 0.5);
+        const tw = 0.4 + Math.abs(Math.sin(t * 2 + i)) * 0.6;
+        ctx.globalAlpha = tw;
+        ctx.fillRect(sx, sy, 1.4, 1.4);
+      }
+      ctx.globalAlpha = 1.0;
+
+      // 2. Blood-Red Full Moon with Pulsing Crimson Halo
+      const moonX = w * 0.78;
+      const moonY = isPreview ? h * 0.16 : h * 0.14;
+      const moonRadius = isPreview ? 22 : 38;
+      const pulseMoon = Math.sin(t * 1.5) * (isPreview ? 1.2 : 2.5);
+
+      const moonAura = ctx.createRadialGradient(moonX, moonY, moonRadius * 0.4, moonX, moonY, moonRadius * 2.8);
+      moonAura.addColorStop(0, 'rgba(229, 57, 53, 0.42)');
+      moonAura.addColorStop(0.5, 'rgba(176, 38, 255, 0.18)');
+      moonAura.addColorStop(1, 'rgba(0, 0, 0, 0)');
+      ctx.fillStyle = moonAura;
+      ctx.beginPath();
+      ctx.arc(moonX, moonY, (moonRadius + pulseMoon) * 2.8, 0, Math.PI * 2);
+      ctx.fill();
+
+      const moonBody = ctx.createRadialGradient(moonX - moonRadius * 0.3, moonY - moonRadius * 0.3, moonRadius * 0.1, moonX, moonY, moonRadius);
+      moonBody.addColorStop(0, '#FFD9D4');
+      moonBody.addColorStop(0.45, '#F28B82');
+      moonBody.addColorStop(0.85, '#E53935');
+      moonBody.addColorStop(1, '#8E1A17');
+      ctx.fillStyle = moonBody;
+      ctx.shadowColor = '#E53935';
+      ctx.shadowBlur = isPreview ? 10 : 20;
+      ctx.beginPath();
+      ctx.arc(moonX, moonY, moonRadius + pulseMoon, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.shadowBlur = 0;
+
+      // 3. Jagged Dead Tree Silhouettes
+      ctx.fillStyle = '#020103';
+      ctx.beginPath();
+      ctx.moveTo(0, h * 0.46);
+      ctx.lineTo(w * 0.04, h * 0.30);
+      ctx.lineTo(w * 0.06, h * 0.34);
+      ctx.lineTo(w * 0.09, h * 0.18);
+      ctx.lineTo(w * 0.105, h * 0.22);
+      ctx.lineTo(w * 0.13, h * 0.12);
+      ctx.lineTo(w * 0.14, h * 0.26);
+      ctx.lineTo(w * 0.18, h * 0.32);
+      ctx.lineTo(w * 0.16, h * 0.44);
+      ctx.lineTo(0, h * 0.52);
+      ctx.closePath();
+      ctx.fill();
+
+      // 4. Crooked Graveyard Hill Silhouette
+      const hillBaseY = h * 0.80;
+      ctx.fillStyle = '#060308';
+      ctx.beginPath();
+      ctx.moveTo(0, hillBaseY + (isPreview ? 12 : 22));
+      ctx.quadraticCurveTo(w * 0.3, hillBaseY - 14, w * 0.55, hillBaseY + 6);
+      ctx.quadraticCurveTo(w * 0.8, hillBaseY + 16, w, hillBaseY + 2);
+      ctx.lineTo(w, h);
+      ctx.lineTo(0, h);
+      ctx.closePath();
+      ctx.fill();
+
+      // 5. Crumbling Tombstones with Flickering Candle Flames
+      const stoneCount = isPreview ? 2 : 4;
+      const stones = [
+        { x: w * 0.16, y: hillBaseY + (isPreview ? 6 : 10), w: isPreview ? 14 : 22, h: isPreview ? 22 : 36, flickerSpeed: 8, tilt: -0.05 },
+        { x: w * 0.42, y: hillBaseY + (isPreview ? 10 : 18), w: isPreview ? 16 : 26, h: isPreview ? 26 : 42, flickerSpeed: 6, tilt: 0.08 },
+        { x: w * 0.65, y: hillBaseY + (isPreview ? 4 : 8), w: isPreview ? 13 : 20, h: isPreview ? 20 : 32, flickerSpeed: 10, tilt: -0.1 },
+        { x: w * 0.88, y: hillBaseY + (isPreview ? 12 : 20), w: isPreview ? 15 : 24, h: isPreview ? 24 : 38, flickerSpeed: 7, tilt: 0.04 },
+      ];
+
+      for (let sIdx = 0; sIdx < Math.min(stoneCount, stones.length); sIdx++) {
+        const s = stones[sIdx];
+        const flicker = 0.7 + Math.sin(t * s.flickerSpeed) * 0.2 + Math.cos(t * (s.flickerSpeed * 1.3)) * 0.1;
+
+        ctx.save();
+        ctx.translate(s.x, s.y);
+        ctx.rotate(s.tilt);
+
+        // Tombstone body
+        ctx.fillStyle = '#141018';
+        ctx.beginPath();
+        ctx.moveTo(-s.w / 2, 0);
+        ctx.lineTo(-s.w / 2, -s.h * 0.55);
+        ctx.quadraticCurveTo(-s.w / 2, -s.h, 0, -s.h);
+        ctx.quadraticCurveTo(s.w / 2, -s.h, s.w / 2, -s.h * 0.55);
+        ctx.lineTo(s.w / 2, 0);
+        ctx.closePath();
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(229, 57, 53, 0.2)';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+
+        // Cracked rune carving
+        ctx.strokeStyle = 'rgba(176, 38, 255, 0.35)';
+        ctx.beginPath();
+        ctx.moveTo(-s.w * 0.2, -s.h * 0.3);
+        ctx.lineTo(s.w * 0.2, -s.h * 0.6);
+        ctx.stroke();
+
+        // Flickering candle flame on top
+        const flameGlow = ctx.createRadialGradient(0, -s.h - 4, 0, 0, -s.h - 4, 14 * flicker);
+        flameGlow.addColorStop(0, `rgba(176, 38, 255, ${0.55 * flicker})`);
+        flameGlow.addColorStop(0.6, `rgba(229, 57, 53, ${0.22 * flicker})`);
+        flameGlow.addColorStop(1, 'rgba(0,0,0,0)');
+        ctx.fillStyle = flameGlow;
+        ctx.beginPath();
+        ctx.arc(0, -s.h - 4, 14 * flicker, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = `rgba(214, 179, 255, ${flicker})`;
+        ctx.beginPath();
+        ctx.moveTo(0, -s.h - 10 * flicker);
+        ctx.quadraticCurveTo(3, -s.h - 4, 0, -s.h);
+        ctx.quadraticCurveTo(-3, -s.h - 4, 0, -s.h - 10 * flicker);
+        ctx.fill();
+
+        ctx.restore();
+      }
+
+      // 6. Crawling Cursed Green Mist / Fog Banks
+      if (state.mists) {
+        for (let mist of state.mists) {
+          mist.x += mist.speed * dt;
+          if (mist.x > w + mist.radiusX) mist.x = -mist.radiusX;
+          if (mist.x < -mist.radiusX) mist.x = w + mist.radiusX;
+
+          const mistGrad = ctx.createRadialGradient(mist.x, mist.y, 0, mist.x, mist.y, mist.radiusX);
+          mistGrad.addColorStop(0, `rgba(57, 255, 136, ${mist.opacity})`);
+          mistGrad.addColorStop(1, 'rgba(57, 255, 136, 0)');
+          ctx.fillStyle = mistGrad;
+          ctx.beginPath();
+          ctx.ellipse(mist.x, mist.y, mist.radiusX, mist.radiusY, 0, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+
+      // 7. Circling Ravens Flying Across the Sky
+      if (state.ravens) {
+        for (let raven of state.ravens) {
+          raven.x += raven.vx * dt;
+          raven.y += Math.sin(t * 2 + raven.wingCycle) * 0.3;
+          raven.wingCycle += dt * 9;
+
+          if (raven.x > w + 50) {
+            raven.x = -50 - Math.random() * 100;
+            raven.y = h * (0.08 + Math.random() * 0.3);
+          }
+
+          const flap = Math.sin(raven.wingCycle) * raven.size * 0.7;
+          ctx.strokeStyle = '#0A0A0D';
+          ctx.lineWidth = Math.max(1.5, raven.size * 0.14);
+          ctx.lineCap = 'round';
+          ctx.beginPath();
+          ctx.moveTo(raven.x - raven.size, raven.y - flap);
+          ctx.quadraticCurveTo(raven.x, raven.y - raven.size * 0.3, raven.x, raven.y);
+          ctx.quadraticCurveTo(raven.x, raven.y - raven.size * 0.3, raven.x + raven.size, raven.y - flap);
+          ctx.stroke();
+        }
+      }
+
+      // 8. Rising Cursed Will-o'-Wisp Fireflies
+      if (state.fireflies) {
+        for (let f of state.fireflies) {
+          f.y += f.vy * dt;
+          f.x += f.vx * dt + Math.sin(t * 3 + f.life) * 0.8;
+          f.life += dt;
+
+          if (f.life >= f.maxLife || f.y < h * 0.3) {
+            f.x = Math.random() * w;
+            f.y = h * (0.75 + Math.random() * 0.2);
+            f.life = 0;
+          }
+
+          const progress = f.life / f.maxLife;
+          const alpha = progress < 0.2 ? progress / 0.2 : (1 - progress);
+          const color = Math.sin(f.life * 3) > 0 ? '#39FF88' : '#B026FF';
+
+          ctx.fillStyle = color;
+          ctx.shadowColor = color;
+          ctx.shadowBlur = 7;
+          ctx.globalAlpha = Math.max(0, Math.min(1, alpha));
+          ctx.beginPath();
+          ctx.arc(f.x, f.y, f.size, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.globalAlpha = 1.0;
+        ctx.shadowBlur = 0;
+      }
+
+      // 9. Rare Flickering Lightning Flash on the Horizon
+      if (typeof state.nextLightning === 'number') {
+        state.nextLightning -= dt;
+        if (state.nextLightning <= 0) {
+          state.lightningAlpha = 0.28 + Math.random() * 0.15;
+          state.nextLightning = 5 + Math.random() * 8;
+        }
+        if (state.lightningAlpha > 0) {
+          ctx.fillStyle = `rgba(176, 38, 255, ${state.lightningAlpha})`;
+          ctx.fillRect(0, 0, w, h * 0.7);
+          state.lightningAlpha -= dt * 1.6;
+          if (state.lightningAlpha < 0) state.lightningAlpha = 0;
+        }
+      }
+      break;
+    }
+
     default:
       break;
   }
@@ -1252,6 +1803,10 @@ function NativeThemeEngine({ theme, isPreview }: { theme: ProfileTheme; isPrevie
       return <NativeCloudsAnimation isPreview={isPreview} />;
     case 'halloween':
       return <NativeHalloweenAnimation isPreview={isPreview} />;
+    case 'pumpkin_hollow':
+      return <NativePumpkinHollowAnimation isPreview={isPreview} />;
+    case 'cursed_crypt':
+      return <NativeCursedCryptAnimation isPreview={isPreview} />;
     default:
       return null;
   }
@@ -3352,6 +3907,829 @@ function NativeHalloweenEmber({ ember }: { ember: any }) {
   );
 }
 
+// -------------------------------------------------------------
+// 22. Native Pumpkin Hollow (Jack-o'-lanterns, spirits, wisps)
+// -------------------------------------------------------------
+function NativePumpkinHollowAnimation({ isPreview }: { isPreview: boolean }) {
+  // Harvest Moon Pulse
+  const moonPulse = useRef(new Animated.Value(1)).current;
+  // Pumpkin Candlelight Flicker (1 & 2)
+  const pumpkinFlicker1 = useRef(new Animated.Value(1)).current;
+  const pumpkinFlicker2 = useRef(new Animated.Value(1)).current;
+  // Floating Spirit / Ghost 1 & Ghost 2
+  const ghost1 = useRef(new Animated.Value(0)).current;
+  const ghost1Bob = useRef(new Animated.Value(0)).current;
+  const ghost2 = useRef(new Animated.Value(0)).current;
+  const ghost2Bob = useRef(new Animated.Value(0)).current;
+
+  // Swirling Witching Fireflies & Emerald Wisps
+  const wispCount = isPreview ? 10 : 20;
+  const wisps = useMemo(() => {
+    return Array.from({ length: wispCount }, (_, i) => ({
+      id: i,
+      left: Math.random() * 100,
+      size: Math.random() * 3.5 + 1.5,
+      duration: 3800 + Math.random() * 3200,
+      delay: Math.random() * 3000,
+      drift: (Math.random() - 0.5) * 45,
+      color: Math.random() > 0.45 ? '#00E676' : (Math.random() > 0.5 ? '#FF6D00' : '#A855F7'),
+      glowColor: Math.random() > 0.45 ? '#00E676' : '#FF6D00',
+    }));
+  }, [wispCount]);
+
+  useEffect(() => {
+    // 1. Moon breathing pulse
+    const moonLoop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(moonPulse, {
+          toValue: 1.07,
+          duration: 3200,
+          easing: Easing.inOut(Easing.sin),
+          useNativeDriver: true,
+        }),
+        Animated.timing(moonPulse, {
+          toValue: 1,
+          duration: 3200,
+          easing: Easing.inOut(Easing.sin),
+          useNativeDriver: true,
+        }),
+      ])
+    );
+
+    // 2. Jack-o'-lantern candlelight flickers
+    const flickLoop1 = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pumpkinFlicker1, {
+          toValue: 0.72,
+          duration: 120,
+          easing: Easing.linear,
+          useNativeDriver: true,
+        }),
+        Animated.timing(pumpkinFlicker1, {
+          toValue: 1.0,
+          duration: 180,
+          easing: Easing.linear,
+          useNativeDriver: true,
+        }),
+        Animated.timing(pumpkinFlicker1, {
+          toValue: 0.85,
+          duration: 90,
+          easing: Easing.linear,
+          useNativeDriver: true,
+        }),
+        Animated.timing(pumpkinFlicker1, {
+          toValue: 1.0,
+          duration: 240,
+          easing: Easing.linear,
+          useNativeDriver: true,
+        }),
+      ])
+    );
+
+    const flickLoop2 = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pumpkinFlicker2, {
+          toValue: 0.82,
+          duration: 160,
+          easing: Easing.linear,
+          useNativeDriver: true,
+        }),
+        Animated.timing(pumpkinFlicker2, {
+          toValue: 1.0,
+          duration: 110,
+          easing: Easing.linear,
+          useNativeDriver: true,
+        }),
+        Animated.timing(pumpkinFlicker2, {
+          toValue: 0.70,
+          duration: 140,
+          easing: Easing.linear,
+          useNativeDriver: true,
+        }),
+        Animated.timing(pumpkinFlicker2, {
+          toValue: 0.95,
+          duration: 210,
+          easing: Easing.linear,
+          useNativeDriver: true,
+        }),
+      ])
+    );
+
+    // 3. Ghost 1 drift & bob
+    const gLoop1 = Animated.loop(
+      Animated.sequence([
+        Animated.timing(ghost1, {
+          toValue: 1,
+          duration: 14000,
+          easing: Easing.inOut(Easing.sin),
+          useNativeDriver: true,
+        }),
+        Animated.timing(ghost1, {
+          toValue: 0,
+          duration: 14000,
+          easing: Easing.inOut(Easing.sin),
+          useNativeDriver: true,
+        }),
+      ])
+    );
+
+    const gBobLoop1 = Animated.loop(
+      Animated.sequence([
+        Animated.timing(ghost1Bob, {
+          toValue: 1,
+          duration: 1800,
+          easing: Easing.inOut(Easing.sin),
+          useNativeDriver: true,
+        }),
+        Animated.timing(ghost1Bob, {
+          toValue: 0,
+          duration: 1800,
+          easing: Easing.inOut(Easing.sin),
+          useNativeDriver: true,
+        }),
+      ])
+    );
+
+    // 4. Ghost 2 drift & bob
+    const gLoop2 = Animated.loop(
+      Animated.sequence([
+        Animated.delay(2000),
+        Animated.timing(ghost2, {
+          toValue: 1,
+          duration: 18000,
+          easing: Easing.inOut(Easing.sin),
+          useNativeDriver: true,
+        }),
+        Animated.timing(ghost2, {
+          toValue: 0,
+          duration: 18000,
+          easing: Easing.inOut(Easing.sin),
+          useNativeDriver: true,
+        }),
+      ])
+    );
+
+    const gBobLoop2 = Animated.loop(
+      Animated.sequence([
+        Animated.timing(ghost2Bob, {
+          toValue: 1,
+          duration: 2200,
+          easing: Easing.inOut(Easing.sin),
+          useNativeDriver: true,
+        }),
+        Animated.timing(ghost2Bob, {
+          toValue: 0,
+          duration: 2200,
+          easing: Easing.inOut(Easing.sin),
+          useNativeDriver: true,
+        }),
+      ])
+    );
+
+    moonLoop.start();
+    flickLoop1.start();
+    flickLoop2.start();
+    gLoop1.start();
+    gBobLoop1.start();
+    gLoop2.start();
+    gBobLoop2.start();
+
+    return () => {
+      moonLoop.stop();
+      flickLoop1.stop();
+      flickLoop2.stop();
+      gLoop1.stop();
+      gBobLoop1.stop();
+      gLoop2.stop();
+      gBobLoop2.stop();
+    };
+  }, [moonPulse, pumpkinFlicker1, pumpkinFlicker2, ghost1, ghost1Bob, ghost2, ghost2Bob]);
+
+  const ghost1X = ghost1.interpolate({ inputRange: [0, 1], outputRange: [-20, SCREEN_WIDTH * 0.75] });
+  const ghost1Y = ghost1Bob.interpolate({ inputRange: [0, 1], outputRange: [0, -18] });
+
+  const ghost2X = ghost2.interpolate({ inputRange: [0, 1], outputRange: [SCREEN_WIDTH * 0.85, -10] });
+  const ghost2Y = ghost2Bob.interpolate({ inputRange: [0, 1], outputRange: [0, 16] });
+
+  return (
+    <View style={StyleSheet.absoluteFill}>
+      {/* Mystical Greenish-Purple Twilight Ambient Aura */}
+      <View
+        style={{
+          position: 'absolute',
+          top: '20%',
+          left: '5%',
+          width: '90%',
+          height: isPreview ? 140 : 280,
+          borderRadius: 140,
+          backgroundColor: '#0F2E1E',
+          opacity: 0.35,
+        }}
+      />
+
+      {/* Harvest Moon with Emerald Corona */}
+      <Animated.View
+        style={{
+          position: 'absolute',
+          top: isPreview ? '10%' : '12%',
+          left: isPreview ? '8%' : '10%',
+          width: isPreview ? 48 : 80,
+          height: isPreview ? 48 : 80,
+          borderRadius: isPreview ? 24 : 40,
+          backgroundColor: '#A7F3D0',
+          shadowColor: '#00E676',
+          shadowOffset: { width: 0, height: 0 },
+          shadowOpacity: 0.9,
+          shadowRadius: isPreview ? 14 : 26,
+          transform: [{ scale: moonPulse }],
+          justifyContent: 'center',
+          alignItems: 'center',
+        }}
+      >
+        <View
+          style={{
+            width: isPreview ? 38 : 64,
+            height: isPreview ? 38 : 64,
+            borderRadius: isPreview ? 19 : 32,
+            backgroundColor: '#FFD166',
+            opacity: 0.9,
+          }}
+        />
+      </Animated.View>
+
+      {/* Spooky Branch Silhouettes */}
+      <View
+        style={{
+          position: 'absolute',
+          top: isPreview ? '22%' : '24%',
+          right: 0,
+          width: isPreview ? 50 : 90,
+          height: isPreview ? 24 : 42,
+          backgroundColor: '#030805',
+          borderTopLeftRadius: 30,
+          borderBottomLeftRadius: 15,
+          opacity: 0.85,
+        }}
+      />
+
+      {/* Spectral Spirit Ghost 1 */}
+      <Animated.View
+        style={{
+          position: 'absolute',
+          top: isPreview ? '28%' : '32%',
+          transform: [{ translateX: ghost1X }, { translateY: ghost1Y }],
+          opacity: 0.78,
+        }}
+      >
+        <View
+          style={{
+            width: isPreview ? 24 : 38,
+            height: isPreview ? 32 : 50,
+            borderTopLeftRadius: 19,
+            borderTopRightRadius: 19,
+            borderBottomLeftRadius: 12,
+            borderBottomRightRadius: 12,
+            backgroundColor: 'rgba(235, 255, 245, 0.85)',
+            shadowColor: '#00E676',
+            shadowOffset: { width: 0, height: 0 },
+            shadowOpacity: 0.9,
+            shadowRadius: 10,
+            alignItems: 'center',
+            paddingTop: isPreview ? 6 : 10,
+          }}
+        >
+          {/* Eyes */}
+          <View style={{ flexDirection: 'row', gap: isPreview ? 4 : 7 }}>
+            <View style={{ width: isPreview ? 3 : 5, height: isPreview ? 5 : 7, borderRadius: 3, backgroundColor: '#051A0E' }} />
+            <View style={{ width: isPreview ? 3 : 5, height: isPreview ? 5 : 7, borderRadius: 3, backgroundColor: '#051A0E' }} />
+          </View>
+          {/* Mouth */}
+          <View style={{ width: isPreview ? 3 : 5, height: isPreview ? 4 : 6, borderRadius: 3, backgroundColor: '#051A0E', marginTop: 3 }} />
+        </View>
+      </Animated.View>
+
+      {/* Spectral Spirit Ghost 2 */}
+      <Animated.View
+        style={{
+          position: 'absolute',
+          top: isPreview ? '46%' : '48%',
+          transform: [{ translateX: ghost2X }, { translateY: ghost2Y }],
+          opacity: 0.65,
+        }}
+      >
+        <View
+          style={{
+            width: isPreview ? 20 : 32,
+            height: isPreview ? 26 : 42,
+            borderTopLeftRadius: 16,
+            borderTopRightRadius: 16,
+            borderBottomLeftRadius: 10,
+            borderBottomRightRadius: 10,
+            backgroundColor: 'rgba(200, 255, 230, 0.80)',
+            shadowColor: '#00E676',
+            shadowOffset: { width: 0, height: 0 },
+            shadowOpacity: 0.8,
+            shadowRadius: 8,
+            alignItems: 'center',
+            paddingTop: isPreview ? 5 : 8,
+          }}
+        >
+          <View style={{ flexDirection: 'row', gap: isPreview ? 3 : 5 }}>
+            <View style={{ width: isPreview ? 2.5 : 4, height: isPreview ? 4 : 6, borderRadius: 2, backgroundColor: '#051A0E' }} />
+            <View style={{ width: isPreview ? 2.5 : 4, height: isPreview ? 4 : 6, borderRadius: 2, backgroundColor: '#051A0E' }} />
+          </View>
+        </View>
+      </Animated.View>
+
+      {/* Ground Silhouette */}
+      <View
+        style={{
+          position: 'absolute',
+          bottom: 0,
+          left: 0,
+          right: 0,
+          height: isPreview ? 45 : 85,
+          backgroundColor: '#040906',
+          borderTopLeftRadius: 50,
+          borderTopRightRadius: 40,
+        }}
+      />
+
+      {/* Jack-o'-Lantern 1 (Bottom Left) */}
+      <View
+        style={{
+          position: 'absolute',
+          bottom: isPreview ? 10 : 20,
+          left: isPreview ? '12%' : '14%',
+          width: isPreview ? 36 : 60,
+          height: isPreview ? 28 : 46,
+          borderRadius: 24,
+          backgroundColor: '#2A0C02',
+          justifyContent: 'center',
+          alignItems: 'center',
+        }}
+      >
+        {/* Stem */}
+        <View
+          style={{
+            position: 'absolute',
+            top: -6,
+            width: 5,
+            height: 7,
+            backgroundColor: '#112211',
+            borderRadius: 2,
+          }}
+        />
+        {/* Carved Glowing Features */}
+        <Animated.View
+          style={{
+            opacity: pumpkinFlicker1,
+            alignItems: 'center',
+            shadowColor: '#FF6D00',
+            shadowOffset: { width: 0, height: 0 },
+            shadowOpacity: 1,
+            shadowRadius: 8,
+          }}
+        >
+          {/* Eyes */}
+          <View style={{ flexDirection: 'row', gap: isPreview ? 7 : 12, marginBottom: 2 }}>
+            <View style={{ width: isPreview ? 4 : 7, height: isPreview ? 4 : 7, backgroundColor: '#FFA000', transform: [{ rotate: '45deg' }] }} />
+            <View style={{ width: isPreview ? 4 : 7, height: isPreview ? 4 : 7, backgroundColor: '#FFA000', transform: [{ rotate: '45deg' }] }} />
+          </View>
+          {/* Sinister Mouth */}
+          <View
+            style={{
+              width: isPreview ? 14 : 24,
+              height: isPreview ? 4 : 6,
+              backgroundColor: '#FF6D00',
+              borderBottomLeftRadius: 6,
+              borderBottomRightRadius: 6,
+            }}
+          />
+        </Animated.View>
+      </View>
+
+      {/* Jack-o'-Lantern 2 (Bottom Right) */}
+      <View
+        style={{
+          position: 'absolute',
+          bottom: isPreview ? 14 : 26,
+          right: isPreview ? '14%' : '16%',
+          width: isPreview ? 42 : 68,
+          height: isPreview ? 32 : 52,
+          borderRadius: 28,
+          backgroundColor: '#260B02',
+          justifyContent: 'center',
+          alignItems: 'center',
+        }}
+      >
+        {/* Stem */}
+        <View
+          style={{
+            position: 'absolute',
+            top: -7,
+            width: 6,
+            height: 8,
+            backgroundColor: '#112211',
+            borderRadius: 2,
+          }}
+        />
+        {/* Carved Glowing Features */}
+        <Animated.View
+          style={{
+            opacity: pumpkinFlicker2,
+            alignItems: 'center',
+            shadowColor: '#FF6D00',
+            shadowOffset: { width: 0, height: 0 },
+            shadowOpacity: 1,
+            shadowRadius: 10,
+          }}
+        >
+          <View style={{ flexDirection: 'row', gap: isPreview ? 8 : 14, marginBottom: 3 }}>
+            <View style={{ width: isPreview ? 5 : 8, height: isPreview ? 5 : 8, backgroundColor: '#FFB300', transform: [{ rotate: '45deg' }] }} />
+            <View style={{ width: isPreview ? 5 : 8, height: isPreview ? 5 : 8, backgroundColor: '#FFB300', transform: [{ rotate: '45deg' }] }} />
+          </View>
+          <View
+            style={{
+              width: isPreview ? 18 : 28,
+              height: isPreview ? 5 : 8,
+              backgroundColor: '#FF7700',
+              borderBottomLeftRadius: 8,
+              borderBottomRightRadius: 8,
+            }}
+          />
+        </Animated.View>
+      </View>
+
+      {/* Swirling Witching Fireflies & Emerald Wisps */}
+      {wisps.map((wisp) => (
+        <NativePumpkinHollowWisp key={wisp.id} wisp={wisp} />
+      ))}
+    </View>
+  );
+}
+
+function NativePumpkinHollowWisp({ wisp }: { wisp: any }) {
+  const anim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.delay(wisp.delay),
+        Animated.timing(anim, {
+          toValue: 1,
+          duration: wisp.duration,
+          easing: Easing.linear,
+          useNativeDriver: true,
+        }),
+      ])
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [anim, wisp]);
+
+  const translateY = anim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [SCREEN_HEIGHT * 0.75, -30],
+  });
+
+  const translateX = anim.interpolate({
+    inputRange: [0, 0.5, 1],
+    outputRange: [0, wisp.drift, 0],
+  });
+
+  const opacity = anim.interpolate({
+    inputRange: [0, 0.25, 0.75, 1],
+    outputRange: [0, 0.95, 0.95, 0],
+  });
+
+  return (
+    <Animated.View
+      style={{
+        position: 'absolute',
+        left: `${wisp.left}%`,
+        bottom: 0,
+        width: wisp.size,
+        height: wisp.size,
+        borderRadius: wisp.size / 2,
+        backgroundColor: wisp.color,
+        opacity,
+        transform: [{ translateY }, { translateX }],
+        shadowColor: wisp.glowColor,
+        shadowOffset: { width: 0, height: 0 },
+        shadowOpacity: 0.95,
+        shadowRadius: 5,
+      }}
+    />
+  );
+}
+
+// -------------------------------------------------------------
+// 23. Native Cursed Crypt (graveyard, moon, ravens, mist, wisps, lightning)
+// -------------------------------------------------------------
+function NativeCursedCryptAnimation({ isPreview }: { isPreview: boolean }) {
+  const moonPulse = useRef(new Animated.Value(1)).current;
+  const flame1 = useRef(new Animated.Value(1)).current;
+  const flame2 = useRef(new Animated.Value(1)).current;
+  const raven1 = useRef(new Animated.Value(0)).current;
+  const raven2 = useRef(new Animated.Value(0)).current;
+  const mist1 = useRef(new Animated.Value(0)).current;
+  const mist2 = useRef(new Animated.Value(0)).current;
+  const lightning = useRef(new Animated.Value(0)).current;
+
+  const fireflyCount = isPreview ? 6 : 12;
+  const fireflies = useMemo(() => {
+    return Array.from({ length: fireflyCount }, (_, i) => ({
+      id: i,
+      left: Math.random() * 100,
+      size: Math.random() * 2.6 + 1,
+      duration: 4200 + Math.random() * 3000,
+      delay: Math.random() * 3500,
+      drift: (Math.random() - 0.5) * 40,
+      color: Math.random() > 0.5 ? '#39FF88' : '#B026FF',
+    }));
+  }, [fireflyCount]);
+
+  useEffect(() => {
+    const moonLoop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(moonPulse, { toValue: 1.08, duration: 2800, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+        Animated.timing(moonPulse, { toValue: 1, duration: 2800, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+      ])
+    );
+
+    const flameLoop1 = Animated.loop(
+      Animated.sequence([
+        Animated.timing(flame1, { toValue: 0.65, duration: 130, easing: Easing.linear, useNativeDriver: true }),
+        Animated.timing(flame1, { toValue: 1.0, duration: 170, easing: Easing.linear, useNativeDriver: true }),
+        Animated.timing(flame1, { toValue: 0.8, duration: 100, easing: Easing.linear, useNativeDriver: true }),
+        Animated.timing(flame1, { toValue: 1.0, duration: 220, easing: Easing.linear, useNativeDriver: true }),
+      ])
+    );
+
+    const flameLoop2 = Animated.loop(
+      Animated.sequence([
+        Animated.timing(flame2, { toValue: 0.78, duration: 150, easing: Easing.linear, useNativeDriver: true }),
+        Animated.timing(flame2, { toValue: 1.0, duration: 120, easing: Easing.linear, useNativeDriver: true }),
+        Animated.timing(flame2, { toValue: 0.68, duration: 160, easing: Easing.linear, useNativeDriver: true }),
+        Animated.timing(flame2, { toValue: 0.95, duration: 200, easing: Easing.linear, useNativeDriver: true }),
+      ])
+    );
+
+    const ravenLoop1 = Animated.loop(
+      Animated.sequence([
+        Animated.timing(raven1, { toValue: 1, duration: 13000, easing: Easing.linear, useNativeDriver: true }),
+        Animated.timing(raven1, { toValue: 0, duration: 0, useNativeDriver: true }),
+        Animated.delay(2500),
+      ])
+    );
+
+    const ravenLoop2 = Animated.loop(
+      Animated.sequence([
+        Animated.delay(5000),
+        Animated.timing(raven2, { toValue: 1, duration: 16000, easing: Easing.linear, useNativeDriver: true }),
+        Animated.timing(raven2, { toValue: 0, duration: 0, useNativeDriver: true }),
+        Animated.delay(3500),
+      ])
+    );
+
+    const mistLoop1 = Animated.loop(
+      Animated.sequence([
+        Animated.timing(mist1, { toValue: 1, duration: 22000, easing: Easing.linear, useNativeDriver: true }),
+        Animated.timing(mist1, { toValue: 0, duration: 0, useNativeDriver: true }),
+      ])
+    );
+
+    const mistLoop2 = Animated.loop(
+      Animated.sequence([
+        Animated.timing(mist2, { toValue: 0, duration: 26000, easing: Easing.linear, useNativeDriver: true }),
+        Animated.timing(mist2, { toValue: 1, duration: 0, useNativeDriver: true }),
+      ])
+    );
+
+    const lightningLoop = Animated.loop(
+      Animated.sequence([
+        Animated.delay(4000 + Math.random() * 5000),
+        Animated.timing(lightning, { toValue: 0.3, duration: 60, easing: Easing.linear, useNativeDriver: true }),
+        Animated.timing(lightning, { toValue: 0, duration: 90, easing: Easing.linear, useNativeDriver: true }),
+        Animated.timing(lightning, { toValue: 0.18, duration: 60, easing: Easing.linear, useNativeDriver: true }),
+        Animated.timing(lightning, { toValue: 0, duration: 400, easing: Easing.linear, useNativeDriver: true }),
+      ])
+    );
+
+    moonLoop.start();
+    flameLoop1.start();
+    flameLoop2.start();
+    ravenLoop1.start();
+    ravenLoop2.start();
+    mistLoop1.start();
+    mistLoop2.start();
+    lightningLoop.start();
+
+    return () => {
+      moonLoop.stop();
+      flameLoop1.stop();
+      flameLoop2.stop();
+      ravenLoop1.stop();
+      ravenLoop2.stop();
+      mistLoop1.stop();
+      mistLoop2.stop();
+      lightningLoop.stop();
+    };
+  }, [moonPulse, flame1, flame2, raven1, raven2, mist1, mist2, lightning]);
+
+  const ravenX1 = raven1.interpolate({ inputRange: [0, 1], outputRange: [-60, SCREEN_WIDTH + 60] });
+  const ravenX2 = raven2.interpolate({ inputRange: [0, 1], outputRange: [-60, SCREEN_WIDTH + 60] });
+  const mistX1 = mist1.interpolate({ inputRange: [0, 1], outputRange: [-SCREEN_WIDTH * 0.5, SCREEN_WIDTH * 1.3] });
+  const mistX2 = mist2.interpolate({ inputRange: [0, 1], outputRange: [SCREEN_WIDTH * 1.3, -SCREEN_WIDTH * 0.5] });
+
+  return (
+    <View style={StyleSheet.absoluteFill} pointerEvents="none">
+      {/* Deep void gradient background */}
+      <View style={[StyleSheet.absoluteFill, { backgroundColor: '#0A0410' }]} />
+      <View style={[StyleSheet.absoluteFill, { backgroundColor: '#1C0710', opacity: 0.35, top: '55%' }]} />
+
+      {/* Blood-Red Moon with pulsing halo */}
+      <Animated.View
+        style={{
+          position: 'absolute',
+          right: SCREEN_WIDTH * 0.1,
+          top: isPreview ? SCREEN_HEIGHT * 0.1 : SCREEN_HEIGHT * 0.08,
+          width: isPreview ? 44 : 76,
+          height: isPreview ? 44 : 76,
+          borderRadius: 40,
+          backgroundColor: '#E53935',
+          transform: [{ scale: moonPulse }],
+          shadowColor: '#E53935',
+          shadowOffset: { width: 0, height: 0 },
+          shadowOpacity: 0.9,
+          shadowRadius: 20,
+        }}
+      />
+      <Animated.View
+        style={{
+          position: 'absolute',
+          right: SCREEN_WIDTH * 0.1 - 20,
+          top: (isPreview ? SCREEN_HEIGHT * 0.1 : SCREEN_HEIGHT * 0.08) - 20,
+          width: isPreview ? 84 : 116,
+          height: isPreview ? 84 : 116,
+          borderRadius: 60,
+          backgroundColor: 'rgba(176, 38, 255, 0.18)',
+          transform: [{ scale: moonPulse }],
+        }}
+      />
+
+      {/* Graveyard hill silhouette */}
+      <View
+        style={{
+          position: 'absolute',
+          bottom: 0,
+          left: 0,
+          right: 0,
+          height: SCREEN_HEIGHT * 0.22,
+          backgroundColor: '#060308',
+          borderTopLeftRadius: SCREEN_WIDTH * 0.6,
+          borderTopRightRadius: SCREEN_WIDTH * 0.4,
+        }}
+      />
+
+      {/* Tombstones with flickering candle flames */}
+      {[{ left: '14%', h: isPreview ? 22 : 36, flame: flame1 }, { left: '38%', h: isPreview ? 28 : 44, flame: flame2 }, { left: '64%', h: isPreview ? 20 : 32, flame: flame1 }, { left: '85%', h: isPreview ? 26 : 40, flame: flame2 }].map((stone, idx) => (
+        <View key={idx} style={{ position: 'absolute', left: stone.left as any, bottom: SCREEN_HEIGHT * 0.06 }}>
+          <View
+            style={{
+              width: isPreview ? 14 : 22,
+              height: stone.h,
+              backgroundColor: '#141018',
+              borderTopLeftRadius: 12,
+              borderTopRightRadius: 12,
+              borderWidth: 1,
+              borderColor: 'rgba(229, 57, 53, 0.2)',
+            }}
+          />
+          <Animated.View
+            style={{
+              position: 'absolute',
+              top: -10,
+              left: (isPreview ? 14 : 22) / 2 - 4,
+              width: 8,
+              height: 10,
+              borderRadius: 4,
+              backgroundColor: '#D6B3FF',
+              opacity: stone.flame,
+              transform: [{ scale: stone.flame }],
+              shadowColor: '#B026FF',
+              shadowOffset: { width: 0, height: 0 },
+              shadowOpacity: 1,
+              shadowRadius: 8,
+            }}
+          />
+        </View>
+      ))}
+
+      {/* Crawling cursed green mist */}
+      <Animated.View
+        style={{
+          position: 'absolute',
+          bottom: SCREEN_HEIGHT * 0.1,
+          width: SCREEN_WIDTH * 0.7,
+          height: isPreview ? 30 : 55,
+          borderRadius: 100,
+          backgroundColor: 'rgba(57, 255, 136, 0.10)',
+          transform: [{ translateX: mistX1 }],
+        }}
+      />
+      <Animated.View
+        style={{
+          position: 'absolute',
+          bottom: SCREEN_HEIGHT * 0.15,
+          width: SCREEN_WIDTH * 0.6,
+          height: isPreview ? 24 : 42,
+          borderRadius: 100,
+          backgroundColor: 'rgba(57, 255, 136, 0.08)',
+          transform: [{ translateX: mistX2 }],
+        }}
+      />
+
+      {/* Circling ravens */}
+      <Animated.View style={{ position: 'absolute', top: SCREEN_HEIGHT * 0.15, transform: [{ translateX: ravenX1 }] }}>
+        <View style={{ width: isPreview ? 10 : 16, height: 2, backgroundColor: '#0A0A0D', borderRadius: 2 }} />
+      </Animated.View>
+      <Animated.View style={{ position: 'absolute', top: SCREEN_HEIGHT * 0.25, transform: [{ translateX: ravenX2 }] }}>
+        <View style={{ width: isPreview ? 8 : 13, height: 2, backgroundColor: '#0A0A0D', borderRadius: 2 }} />
+      </Animated.View>
+
+      {/* Rising cursed will-o'-wisp fireflies */}
+      {fireflies.map((f) => (
+        <NativeCursedCryptFirefly key={f.id} firefly={f} />
+      ))}
+
+      {/* Rare lightning flash */}
+      <Animated.View
+        style={[
+          StyleSheet.absoluteFill,
+          { backgroundColor: '#B026FF', opacity: lightning },
+        ]}
+      />
+    </View>
+  );
+}
+
+function NativeCursedCryptFirefly({ firefly }: { firefly: any }) {
+  const anim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.delay(firefly.delay),
+        Animated.timing(anim, {
+          toValue: 1,
+          duration: firefly.duration,
+          easing: Easing.linear,
+          useNativeDriver: true,
+        }),
+      ])
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [anim, firefly]);
+
+  const translateY = anim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [SCREEN_HEIGHT * 0.78, SCREEN_HEIGHT * 0.3],
+  });
+
+  const translateX = anim.interpolate({
+    inputRange: [0, 0.5, 1],
+    outputRange: [0, firefly.drift, 0],
+  });
+
+  const opacity = anim.interpolate({
+    inputRange: [0, 0.2, 0.8, 1],
+    outputRange: [0, 0.9, 0.9, 0],
+  });
+
+  return (
+    <Animated.View
+      style={{
+        position: 'absolute',
+        left: `${firefly.left}%`,
+        bottom: 0,
+        width: firefly.size,
+        height: firefly.size,
+        borderRadius: firefly.size / 2,
+        backgroundColor: firefly.color,
+        opacity,
+        transform: [{ translateY }, { translateX }],
+        shadowColor: firefly.color,
+        shadowOffset: { width: 0, height: 0 },
+        shadowOpacity: 0.95,
+        shadowRadius: 5,
+      }}
+    />
+  );
+}
+
 // =========================================================================
 // HALLOWEEN EXCLUSIVE AVATAR FRAME & SPECIAL EFFECTS
 // =========================================================================
@@ -3360,13 +4738,17 @@ interface HalloweenAvatarFrameProps {
   children: React.ReactNode;
   size?: number;
   active?: boolean;
+  themeId?: string | null;
 }
 
-export function HalloweenAvatarFrame({ children, size = 100, active = true }: HalloweenAvatarFrameProps) {
+export function HalloweenAvatarFrame({ children, size = 100, active = true, themeId = 'halloween' }: HalloweenAvatarFrameProps) {
   const rotateAnim = useRef(new Animated.Value(0)).current;
   const pulseAnim = useRef(new Animated.Value(0)).current;
   const batOrbitAnim = useRef(new Animated.Value(0)).current;
   const batFlapAnim = useRef(new Animated.Value(0)).current;
+
+  const isPumpkinTheme = themeId === 'pumpkin_hollow';
+  const isCryptTheme = themeId === 'cursed_crypt';
 
   useEffect(() => {
     if (!active) return;
@@ -3375,44 +4757,44 @@ export function HalloweenAvatarFrame({ children, size = 100, active = true }: Ha
     const rotLoop = Animated.loop(
       Animated.timing(rotateAnim, {
         toValue: 1,
-        duration: 20000,
+        duration: isPumpkinTheme ? 16000 : isCryptTheme ? 18000 : 20000,
         easing: Easing.linear,
         useNativeDriver: true,
       })
     );
 
-    // Subtle orange-purple magical pulse
+    // Subtle magical pulse
     const pulseLoop = Animated.loop(
       Animated.sequence([
         Animated.timing(pulseAnim, {
           toValue: 1,
-          duration: 2400,
+          duration: isPumpkinTheme ? 2000 : isCryptTheme ? 2200 : 2400,
           easing: Easing.inOut(Easing.sin),
           useNativeDriver: true,
         }),
         Animated.timing(pulseAnim, {
           toValue: 0,
-          duration: 2400,
+          duration: isPumpkinTheme ? 2000 : isCryptTheme ? 2200 : 2400,
           easing: Easing.inOut(Easing.sin),
           useNativeDriver: true,
         }),
       ])
     );
 
-    // Bat circling or flying over the magical ring
+    // Bat / Spirit / Raven circling or flying over the magical ring
     const batLoop = Animated.loop(
       Animated.sequence([
-        Animated.delay(1200),
+        Animated.delay(1000),
         Animated.timing(batOrbitAnim, {
           toValue: 1,
-          duration: 8000,
+          duration: isPumpkinTheme ? 7000 : isCryptTheme ? 7500 : 8000,
           easing: Easing.linear,
           useNativeDriver: true,
         }),
       ])
     );
 
-    // Bat wing flap
+    // Wing / spirit flap
     const flapLoop = Animated.loop(
       Animated.sequence([
         Animated.timing(batFlapAnim, {
@@ -3441,7 +4823,7 @@ export function HalloweenAvatarFrame({ children, size = 100, active = true }: Ha
       batLoop.stop();
       flapLoop.stop();
     };
-  }, [active, rotateAnim, pulseAnim, batOrbitAnim, batFlapAnim]);
+  }, [active, rotateAnim, pulseAnim, batOrbitAnim, batFlapAnim, isPumpkinTheme, isCryptTheme]);
 
   if (!active) {
     return <>{children}</>;
@@ -3452,7 +4834,7 @@ export function HalloweenAvatarFrame({ children, size = 100, active = true }: Ha
 
   const ringRotate = rotateAnim.interpolate({
     inputRange: [0, 1],
-    outputRange: ['0deg', '360deg'],
+    outputRange: isPumpkinTheme ? ['360deg', '0deg'] : ['0deg', '360deg'],
   });
 
   const glowOpacity = pulseAnim.interpolate({
@@ -3470,9 +4852,13 @@ export function HalloweenAvatarFrame({ children, size = 100, active = true }: Ha
     outputRange: [1, -0.6],
   });
 
+  const primaryRingColor = isPumpkinTheme ? '#00E676' : isCryptTheme ? '#E53935' : '#FF7700';
+  const secondaryAuraColor = isPumpkinTheme ? '#103B22' : isCryptTheme ? '#3A0A2E' : '#8422A7';
+  const shadowGlow = isPumpkinTheme ? '#00E676' : isCryptTheme ? '#B026FF' : '#FF7700';
+
   return (
     <View style={{ width: outerSize, height: outerSize, alignItems: 'center', justifyContent: 'center' }}>
-      {/* Outer Purple/Orange Ambient Aura */}
+      {/* Outer Ambient Aura */}
       <Animated.View
         style={{
           position: 'absolute',
@@ -3480,17 +4866,17 @@ export function HalloweenAvatarFrame({ children, size = 100, active = true }: Ha
           height: outerSize,
           borderRadius: outerSize / 2,
           borderWidth: 2,
-          borderColor: '#8422A7',
-          backgroundColor: 'rgba(132, 34, 167, 0.12)',
+          borderColor: secondaryAuraColor,
+          backgroundColor: isPumpkinTheme ? 'rgba(0, 230, 118, 0.12)' : isCryptTheme ? 'rgba(229, 57, 53, 0.12)' : 'rgba(132, 34, 167, 0.12)',
           opacity: glowOpacity,
-          shadowColor: '#FF7700',
+          shadowColor: shadowGlow,
           shadowOffset: { width: 0, height: 0 },
           shadowOpacity: 0.9,
           shadowRadius: 12,
         }}
       />
 
-      {/* Cracked Magical Ring with Runes & Segments */}
+      {/* Cracked / Runed Magical Ring */}
       <Animated.View
         style={{
           position: 'absolute',
@@ -3498,16 +4884,16 @@ export function HalloweenAvatarFrame({ children, size = 100, active = true }: Ha
           height: ringSize,
           borderRadius: ringSize / 2,
           borderWidth: 2.5,
-          borderColor: '#FF7700',
+          borderColor: primaryRingColor,
           borderStyle: 'dashed',
           transform: [{ rotate: ringRotate }],
-          shadowColor: '#FFA500',
+          shadowColor: shadowGlow,
           shadowOffset: { width: 0, height: 0 },
           shadowOpacity: 0.8,
           shadowRadius: 8,
         }}
       >
-        {/* Magic Crystal / Crack Node Top */}
+        {/* Magic Crystal Top */}
         <View
           style={{
             position: 'absolute',
@@ -3516,13 +4902,13 @@ export function HalloweenAvatarFrame({ children, size = 100, active = true }: Ha
             width: 8,
             height: 8,
             borderRadius: 4,
-            backgroundColor: '#FFD700',
-            shadowColor: '#FFA500',
+            backgroundColor: isPumpkinTheme ? '#A7F3D0' : isCryptTheme ? '#D6B3FF' : '#FFD700',
+            shadowColor: shadowGlow,
             shadowOpacity: 1,
             shadowRadius: 6,
           }}
         />
-        {/* Magic Crystal / Crack Node Bottom */}
+        {/* Magic Crystal Bottom */}
         <View
           style={{
             position: 'absolute',
@@ -3531,8 +4917,8 @@ export function HalloweenAvatarFrame({ children, size = 100, active = true }: Ha
             width: 8,
             height: 8,
             borderRadius: 4,
-            backgroundColor: '#C084FC',
-            shadowColor: '#8422A7',
+            backgroundColor: isPumpkinTheme ? '#FF6D00' : isCryptTheme ? '#B026FF' : '#C084FC',
+            shadowColor: isPumpkinTheme ? '#FF6D00' : isCryptTheme ? '#B026FF' : '#8422A7',
             shadowOpacity: 1,
             shadowRadius: 6,
           }}
@@ -3546,7 +4932,7 @@ export function HalloweenAvatarFrame({ children, size = 100, active = true }: Ha
             width: 8,
             height: 8,
             borderRadius: 4,
-            backgroundColor: '#FF7700',
+            backgroundColor: primaryRingColor,
           }}
         />
         {/* Magic Crack Right */}
@@ -3558,12 +4944,12 @@ export function HalloweenAvatarFrame({ children, size = 100, active = true }: Ha
             width: 8,
             height: 8,
             borderRadius: 4,
-            backgroundColor: '#FF7700',
+            backgroundColor: primaryRingColor,
           }}
         />
       </Animated.View>
 
-      {/* Circling Mini Bat over the magical ring */}
+      {/* Circling Mini Bat / Spirit over the magical ring */}
       <Animated.View
         style={{
           position: 'absolute',
@@ -3575,46 +4961,79 @@ export function HalloweenAvatarFrame({ children, size = 100, active = true }: Ha
           pointerEvents: 'none',
         }}
       >
-        <Animated.View
-          style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            transform: [{ scaleY: batWingScale }, { rotate: '90deg' }],
-          }}
-        >
-          {/* Bat Left Wing */}
+        {isPumpkinTheme ? (
+          /* Mini Floating Spirit */
           <View
             style={{
-              width: 6,
-              height: 4,
-              backgroundColor: '#000000',
-              borderTopLeftRadius: 4,
-              borderBottomRightRadius: 2,
-            }}
-          />
-          {/* Bat Body */}
-          <View
-            style={{
-              width: 3,
-              height: 5,
-              backgroundColor: '#2E0854',
-              borderRadius: 2,
-              shadowColor: '#FF7700',
+              width: 10,
+              height: 12,
+              borderRadius: 5,
+              backgroundColor: '#A7F3D0',
+              shadowColor: '#00E676',
               shadowOpacity: 1,
-              shadowRadius: 3,
+              shadowRadius: 5,
+              alignItems: 'center',
+              justifyContent: 'center',
             }}
-          />
-          {/* Bat Right Wing */}
-          <View
+          >
+            <View style={{ width: 2, height: 2, borderRadius: 1, backgroundColor: '#02180B' }} />
+          </View>
+        ) : isCryptTheme ? (
+          /* Mini Circling Raven */
+          <Animated.View
             style={{
-              width: 6,
-              height: 4,
-              backgroundColor: '#000000',
-              borderTopRightRadius: 4,
-              borderBottomLeftRadius: 2,
+              flexDirection: 'row',
+              alignItems: 'center',
+              transform: [{ scaleY: batWingScale }, { rotate: '90deg' }],
             }}
-          />
-        </Animated.View>
+          >
+            <View style={{ width: 6, height: 3.5, backgroundColor: '#0A0A0D', borderTopLeftRadius: 4, borderBottomRightRadius: 2 }} />
+            <View style={{ width: 3, height: 4.5, backgroundColor: '#2E0812', borderRadius: 2, shadowColor: '#E53935', shadowOpacity: 1, shadowRadius: 3 }} />
+            <View style={{ width: 6, height: 3.5, backgroundColor: '#0A0A0D', borderTopRightRadius: 4, borderBottomLeftRadius: 2 }} />
+          </Animated.View>
+        ) : (
+          /* Mini Flying Bat */
+          <Animated.View
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              transform: [{ scaleY: batWingScale }, { rotate: '90deg' }],
+            }}
+          >
+            {/* Bat Left Wing */}
+            <View
+              style={{
+                width: 6,
+                height: 4,
+                backgroundColor: '#000000',
+                borderTopLeftRadius: 4,
+                borderBottomRightRadius: 2,
+              }}
+            />
+            {/* Bat Body */}
+            <View
+              style={{
+                width: 3,
+                height: 5,
+                backgroundColor: '#2E0854',
+                borderRadius: 2,
+                shadowColor: '#FF7700',
+                shadowOpacity: 1,
+                shadowRadius: 3,
+              }}
+            />
+            {/* Bat Right Wing */}
+            <View
+              style={{
+                width: 6,
+                height: 4,
+                backgroundColor: '#000000',
+                borderTopRightRadius: 4,
+                borderBottomLeftRadius: 2,
+              }}
+            />
+          </Animated.View>
+        )}
       </Animated.View>
 
       {/* Avatar Content */}

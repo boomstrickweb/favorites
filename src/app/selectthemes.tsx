@@ -27,6 +27,7 @@ const THEMES_LIST: Array<{
   name: string;
   description: string;
   animationLabel: string;
+  tag?: string;
 }> = [
   {
     id: 'default',
@@ -39,6 +40,7 @@ const THEMES_LIST: Array<{
     name: t.name,
     description: t.description,
     animationLabel: t.animationLabel,
+    tag: t.tag,
   })),
 ];
 
@@ -197,6 +199,13 @@ export default function SelectThemeScreen() {
             </TouchableOpacity>
           )}
 
+          {/* Halloween Tag Badge on Thumbnail */}
+          {item.tag && (
+            <View style={styles.thumbnailTagBadge}>
+              <ThemedText style={styles.thumbnailTagText}>🎃 {item.tag}</ThemedText>
+            </View>
+          )}
+
           {isSelected && (
             <View style={[styles.selectedIndicator, { backgroundColor: theme.brand }]}>
               <Ionicons name="checkmark" size={14} color="#FFF" />
@@ -212,6 +221,11 @@ export default function SelectThemeScreen() {
             </ThemedText>
             {savingId === item.id && <ActivityIndicator size="small" color={theme.brand} />}
           </View>
+          {item.tag && (
+            <View style={styles.halloweenPill}>
+              <ThemedText style={styles.halloweenPillText}>🎃 {item.tag} Theme</ThemedText>
+            </View>
+          )}
           <ThemedText style={styles.themeDescription} numberOfLines={2}>
             {item.description}
           </ThemedText>
@@ -297,6 +311,11 @@ export default function SelectThemeScreen() {
                     <View style={styles.mockAvatar}>
                       <Ionicons name="person" size={40} color={previewTheme?.primaryColor || '#FFF'} />
                     </View>
+                    {previewTheme?.tag && (
+                      <View style={styles.modalTagBadge}>
+                        <ThemedText style={styles.modalTagBadgeText}>🎃 {previewTheme.tag} Edition</ThemedText>
+                      </View>
+                    )}
                     <ThemedText style={[styles.mockName, { color: previewTheme?.textColor || '#FFF' }]}>
                       Profile Preview
                     </ThemedText>
@@ -428,6 +447,27 @@ const styles = StyleSheet.create({
     padding: 5,
     zIndex: 5,
   },
+  thumbnailTagBadge: {
+    position: 'absolute',
+    top: 6,
+    left: 32,
+    backgroundColor: 'rgba(255, 119, 0, 0.92)',
+    paddingHorizontal: 6,
+    paddingVertical: 2.5,
+    borderRadius: 6,
+    zIndex: 5,
+    shadowColor: '#FF7700',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.6,
+    shadowRadius: 3,
+  },
+  thumbnailTagText: {
+    color: '#FFFFFF',
+    fontSize: 9,
+    fontWeight: '800',
+    textTransform: 'uppercase',
+    letterSpacing: 0.4,
+  },
   selectedIndicator: {
     position: 'absolute',
     top: 6,
@@ -461,6 +501,22 @@ const styles = StyleSheet.create({
     fontSize: 12,
     opacity: 0.7,
     lineHeight: 16,
+  },
+  halloweenPill: {
+    alignSelf: 'flex-start',
+    backgroundColor: 'rgba(255, 119, 0, 0.16)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 119, 0, 0.45)',
+    paddingHorizontal: 6,
+    paddingVertical: 1.5,
+    borderRadius: 6,
+    marginBottom: 4,
+  },
+  halloweenPillText: {
+    color: '#FF8800',
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 0.3,
   },
   modalBackground: {
     flex: 1,
@@ -506,6 +562,21 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: Spacing.three,
+  },
+  modalTagBadge: {
+    backgroundColor: 'rgba(255, 119, 0, 0.22)',
+    borderColor: '#FF7700',
+    borderWidth: 1,
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+    borderRadius: 12,
+    marginBottom: 8,
+  },
+  modalTagBadgeText: {
+    color: '#FFA500',
+    fontSize: 12,
+    fontWeight: '700',
+    letterSpacing: 0.5,
   },
   mockName: {
     fontSize: 22,

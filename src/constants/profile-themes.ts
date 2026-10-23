@@ -3,6 +3,7 @@ export interface ProfileTheme {
   name: string;
   description: string;
   animationLabel: string;
+  tag?: string;
   primaryColor: string;
   secondaryColor: string;
   accentColor: string;
@@ -14,6 +15,51 @@ export interface ProfileTheme {
 }
 
 export const PROFILE_THEMES: ProfileTheme[] = [
+  {
+    id: 'halloween',
+    name: 'Haunted Night 🎃',
+    description: 'Dark purple night sky, orange moon, distant castle, flying bats & glowing embers',
+    animationLabel: 'Haunted castle, orange moon, fog, embers & flying bats',
+    tag: 'Halloween',
+    primaryColor: '#FF7700',
+    secondaryColor: '#8422A7',
+    accentColor: '#FFA500',
+    bgBase: '#0D0518',
+    cardBg: 'rgba(12, 6, 20, 0.82)',
+    cardBorder: 'rgba(255, 119, 0, 0.38)',
+    textColor: '#FFFFFF',
+    textSecondaryColor: '#FFB366',
+  },
+  {
+    id: 'pumpkin_hollow',
+    name: 'Pumpkin Hollow 👻',
+    description: 'Carved glowing Jack-o\'-lanterns, creeping mist, spectral ghosts & witching fireflies',
+    animationLabel: 'Glowing Jack-o\'-lanterns, floating spirits & witching fireflies',
+    tag: 'Halloween',
+    primaryColor: '#00E676',
+    secondaryColor: '#FF6D00',
+    accentColor: '#9C27B0',
+    bgBase: '#060B08',
+    cardBg: 'rgba(8, 18, 12, 0.82)',
+    cardBorder: 'rgba(0, 230, 118, 0.35)',
+    textColor: '#FFFFFF',
+    textSecondaryColor: '#A7F3D0',
+  },
+  {
+    id: 'cursed_crypt',
+    name: 'Cursed Crypt 💀',
+    description: 'Blood-red moon, crumbling graveyard, cursed green mist, circling ravens & flickering lightning',
+    animationLabel: 'Graveyard fog, crimson moon, ravens, candle flames & lightning flashes',
+    tag: 'Halloween',
+    primaryColor: '#E53935',
+    secondaryColor: '#39FF88',
+    accentColor: '#B026FF',
+    bgBase: '#07050A',
+    cardBg: 'rgba(10, 6, 14, 0.84)',
+    cardBorder: 'rgba(229, 57, 53, 0.38)',
+    textColor: '#FFFFFF',
+    textSecondaryColor: '#D6B3FF',
+  },
   {
     id: 'matrix',
     name: 'Matrix',
@@ -281,20 +327,6 @@ export const PROFILE_THEMES: ProfileTheme[] = [
     textSecondaryColor: '#FFB8D2',
   },
   {
-    id: 'halloween',
-    name: 'Haunted Night 🎃',
-    description: 'Dark purple night sky, orange moon, distant castle, flying bats & glowing embers',
-    animationLabel: 'Haunted castle, orange moon, fog, embers & flying bats',
-    primaryColor: '#FF7700',
-    secondaryColor: '#8422A7',
-    accentColor: '#FFA500',
-    bgBase: '#0D0518',
-    cardBg: 'rgba(12, 6, 20, 0.82)',
-    cardBorder: 'rgba(255, 119, 0, 0.38)',
-    textColor: '#FFFFFF',
-    textSecondaryColor: '#FFB366',
-  },
-  {
     id: 'clouds',
     name: 'Clouds',
     description: 'Slowly moving clouds',
@@ -313,6 +345,10 @@ export const PROFILE_THEMES: ProfileTheme[] = [
 const LEGACY_MAP: Record<string, string> = {
   haunted_night: 'halloween',
   spooky: 'halloween',
+  pumpkin_patch: 'pumpkin_hollow',
+  witching_hour: 'pumpkin_hollow',
+  graveyard: 'cursed_crypt',
+  crypt: 'cursed_crypt',
   cinema: 'cyberpunk',
   library: 'clouds',
   vinyl: 'particles',

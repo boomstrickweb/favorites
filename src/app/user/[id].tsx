@@ -551,7 +551,7 @@ export default function UserProfileScreen() {
         <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
           <View style={styles.header}>
             <View style={styles.profileInfo}>
-              <HalloweenAvatarFrame size={80} active={profile.selected_theme === 'halloween'}>
+              <HalloweenAvatarFrame size={80} active={profile.selected_theme === 'halloween' || profile.selected_theme === 'pumpkin_hollow' || profile.selected_theme === 'cursed_crypt'} themeId={profile.selected_theme}>
                 <View style={[styles.avatar, { backgroundColor: cardBg, borderColor: cardBorder, borderWidth: cardBorderWidth }]}>
                   {profile.avatar_url ? (
                     <Image source={{ uri: profile.avatar_url }} style={styles.avatarImage} />
@@ -564,7 +564,7 @@ export default function UserProfileScreen() {
                 <View style={styles.usernameRow}>
                   <ThemedText type="defaultSemiBold" style={[styles.username, profileTheme && { color: profileTheme.textColor }]}>
                     {profile.full_name || profile.username}
-                    {profile.selected_theme === 'halloween' ? ' 🎃' : ''}
+                    {profile.selected_theme === 'halloween' ? ' 🎃' : profile.selected_theme === 'pumpkin_hollow' ? ' 👻' : profile.selected_theme === 'cursed_crypt' ? ' 💀' : ''}
                   </ThemedText>
                   <UserBadge badgeId={profile.profile_badge} size={Platform.OS === 'web' ? 32 : 28} />
                 </View>

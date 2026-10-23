@@ -168,7 +168,7 @@ export default function ProfileScreen() {
         <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
           <View style={styles.header}>
             <View style={styles.profileInfo}>
-              <HalloweenAvatarFrame size={80} active={activeThemeId === 'halloween'}>
+              <HalloweenAvatarFrame size={80} active={activeThemeId === 'halloween' || activeThemeId === 'pumpkin_hollow' || activeThemeId === 'cursed_crypt'} themeId={activeThemeId}>
                 <View style={[styles.avatar, { backgroundColor: cardBg, borderColor: cardBorder, borderWidth: cardBorderWidth }]}>{profile?.avatar_url ? (
                     <Image source={{ uri: profile.avatar_url }} style={styles.avatarImage} />
                   ) : (
@@ -179,7 +179,7 @@ export default function ProfileScreen() {
                 <View style={styles.usernameRow}>
                   <ThemedText type="defaultSemiBold" style={[styles.username, profileTheme && { color: profileTheme.textColor }]} numberOfLines={1}>
                     {profile?.full_name || profile?.username}
-                    {activeThemeId === 'halloween' ? ' 🎃' : ''}
+                    {activeThemeId === 'halloween' ? ' 🎃' : activeThemeId === 'pumpkin_hollow' ? ' 👻' : activeThemeId === 'cursed_crypt' ? ' 💀' : ''}
                   </ThemedText>
                   <UserBadge badgeId={profile?.profile_badge} size={Platform.OS === 'web' ? 32 : 28} />
                 </View>
@@ -193,7 +193,8 @@ export default function ProfileScreen() {
               style={[
                 styles.editButton, 
                 { backgroundColor: cardBg, borderColor: cardBorder, borderWidth: cardBorderWidth, flex: 1 },
-                activeThemeId === 'halloween' && { shadowColor: '#8422A7', shadowOpacity: 0.6, shadowRadius: 8, elevation: 4 }
+                activeThemeId === 'halloween' && { shadowColor: '#8422A7', shadowOpacity: 0.6, shadowRadius: 8, elevation: 4 },
+                activeThemeId === 'cursed_crypt' && { shadowColor: '#B026FF', shadowOpacity: 0.6, shadowRadius: 8, elevation: 4 }
               ]}
               activeOpacity={0.7}
               onPress={() => router.push('/editprofile')}
@@ -204,12 +205,13 @@ export default function ProfileScreen() {
               style={[
                 styles.editButton, 
                 { backgroundColor: profileTheme ? profileTheme.primaryColor : theme.brand, flex: 1, marginLeft: Spacing.two },
-                activeThemeId === 'halloween' && { shadowColor: '#FF7700', shadowOpacity: 0.8, shadowRadius: 10, elevation: 6 }
+                activeThemeId === 'halloween' && { shadowColor: '#FF7700', shadowOpacity: 0.8, shadowRadius: 10, elevation: 6 },
+                activeThemeId === 'cursed_crypt' && { shadowColor: '#E53935', shadowOpacity: 0.8, shadowRadius: 10, elevation: 6 }
               ]}
               activeOpacity={0.7}
               onPress={() => router.push('/findsoulmate')}
             >
-              <ThemedText style={[styles.editButtonText, { color: profileTheme ? (activeThemeId === 'halloween' ? '#FFFFFF' : '#000000') : '#fff' }]}>Find Soulmate</ThemedText>
+              <ThemedText style={[styles.editButtonText, { color: profileTheme ? ((activeThemeId === 'halloween' || activeThemeId === 'cursed_crypt') ? '#FFFFFF' : '#000000') : '#fff' }]}>Find Soulmate</ThemedText>
             </TouchableOpacity>
           </View>
 
