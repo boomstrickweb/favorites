@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, TouchableOpacity, View, Alert, Platform, ActivityIndicator, FlatList, Dimensions } from 'react-native';
+import { StyleSheet, TouchableOpacity, View, Alert, Platform, ActivityIndicator, FlatList, Dimensions, ScrollView } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { 
   FadeInUp, 
@@ -20,13 +20,20 @@ import { ThemedView } from '@/components/themed-view';
 import { useTheme } from '@/hooks/use-theme';
 import { supabase } from '@/lib/supabase';
 import { Spacing, MaxContentWidth } from '@/constants/theme';
-import { GIFTS, Gift } from '@/components/Gifts';
+import { GIFTS, Gift, GiftIconDisplay, IconFamily } from '@/components/Gifts';
 
 const { width } = Dimensions.get('window');
 const COLUMN_COUNT = 3;
 const ITEM_SIZE = (Math.min(width, MaxContentWidth) - Spacing.four * 2 - Spacing.three * (COLUMN_COUNT - 1)) / COLUMN_COUNT;
 
-function AnimatedGiftIcon({ icon, color, type }: { icon: keyof typeof Ionicons.glyphMap, color: string, type: Gift['animationType'] }) {
+const CATEGORIES = [
+  { id: 'all', label: 'All' },
+  { id: 'halloween', label: '🎃 Halloween' },
+  { id: 'standard', label: 'Standard' },
+  { id: 'premium', label: '⭐ Premium' },
+];
+
+function AnimatedGiftIcon({ icon, iconFamily = 'Ionicons', color, type }: { icon: string, iconFamily?: IconFamily, color: string, type: Gift['animationType'] }) {
   const animation = useSharedValue(0);
 
   useEffect(() => {
@@ -75,7 +82,7 @@ function AnimatedGiftIcon({ icon, color, type }: { icon: keyof typeof Ionicons.g
 
   return (
     <Animated.View style={animatedStyle}>
-      <Ionicons name={icon} size={32} color={color} />
+      <GiftIconDisplay icon={icon} iconFamily={iconFamily} size={32} color={color} />
     </Animated.View>
   );
 }
@@ -88,6 +95,7 @@ export default function SendGiftScreen() {
   const [isPremium, setIsPremium] = useState(false);
   const [giftsSentToday, setGiftsSentToday] = useState(0);
   const [fetchingStatus, setFetchingStatus] = useState(true);
+  const [selectedCategory, setSelectedCategory] = useState<string>('all');
 
   useEffect(() => {
     checkUserStatus();
@@ -196,9 +204,13 @@ export default function SendGiftScreen() {
     }
   };
 
+  const filteredGifts = selectedCategory === 'all' 
+    ? GIFTS 
+    : GIFTS.filter(g => (g.category || (g.isPremium ? 'premium' : 'standard')) === selectedCategory);
+
   const renderGiftItem = ({ item, index }: { item: Gift; index: number }) => (
     <Animated.View 
-      entering={FadeInUp.delay(index * 50).duration(400)}
+      entering={FadeInUp.delay(index * 30).duration(300)}
       layout={Layout.springify()}
     >
       <TouchableOpacity
@@ -210,14 +222,19 @@ export default function SendGiftScreen() {
         disabled={loading}
       >
         <View style={[styles.iconContainer, { backgroundColor: item.color + '20' }]}>
-          <AnimatedGiftIcon icon={item.icon} color={item.color} type={item.animationType} />
+          <AnimatedGiftIcon icon={item.icon} iconFamily={item.iconFamily} color={item.color} type={item.animationType} />
           {item.isPremium && (
             <View style={styles.premiumBadge}>
               <Ionicons name="star" size={12} color="#FFD700" />
             </View>
           )}
+          {item.category === 'halloween' && (
+            <View style={[styles.premiumBadge, { backgroundColor: '#FF7518', borderColor: '#FFA726' }]}>
+              <GiftIconDisplay icon="pumpkin" iconFamily="MaterialCommunityIcons" size={11} color="#FFF" />
+            </View>
+          )}
         </View>
-        <ThemedText style={styles.giftName}>{item.name}</ThemedText>
+        <ThemedText style={styles.giftName} numberOfLines={2}>{item.name}</ThemedText>
       </TouchableOpacity>
     </Animated.View>
   );
@@ -239,28 +256,69 @@ export default function SendGiftScreen() {
           </View>
         ) : (
           <FlatList
-            data={GIFTS}
+            data={filteredGifts}
             keyExtractor={(item) => item.id}
             renderItem={renderGiftItem}
             numColumns={COLUMN_COUNT}
             contentContainerStyle={styles.listContent}
             columnWrapperStyle={styles.columnWrapper}
             ListHeaderComponent={
-              <View style={styles.infoContainer}>
-                {!isPremium && (
-                  <View style={[styles.limitBadge, { backgroundColor: theme.brand + '20' }]}>
-                    <ThemedText style={[styles.limitText, { color: theme.brand }]}>
-                      Daily Limit: {giftsSentToday}/3 Gifts Used
-                    </ThemedText>
-                  </View>
-                )}
-                {isPremium && (
-                  <View style={[styles.limitBadge, { backgroundColor: '#FFD70020' }]}>
-                    <ThemedText style={[styles.limitText, { color: '#B8860B' }]}>
-                      Premium User: Unlimited Gifts
-                    </ThemedText>
-                  </View>
-                )}
+              <View style={styles.headerSection}>
+                <View style={styles.infoContainer}>
+                  {!isPremium && (
+                    <View style={[styles.limitBadge, { backgroundColor: theme.brand + '20' }]}>
+                      <ThemedText style={[styles.limitText, { color: theme.brand }]}>
+                        Daily Limit: {giftsSentToday}/3 Gifts Used
+                      </ThemedText>
+                    </View>
+                  )}
+                  {isPremium && (
+                    <View style={[styles.limitBadge, { backgroundColor: '#FFD70020' }]}>
+                      <ThemedText style={[styles.limitText, { color: '#B8860B' }]}>
+                        Premium User: Unlimited Gifts
+                      </ThemedText>
+                    </View>
+                  )}
+                </View>
+
+                {/* Category Filter Chips */}
+                <View style={styles.categoriesContainer}>
+                  <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerStyle={styles.categoriesContent}
+                  >
+                    {CATEGORIES.map((cat) => {
+                      const isActive = selectedCategory === cat.id;
+                      return (
+                        <TouchableOpacity
+                          key={cat.id}
+                          style={[
+                            styles.categoryChip,
+                            {
+                              backgroundColor: isActive 
+                                ? (cat.id === 'halloween' ? '#FF7518' : theme.brand)
+                                : theme.backgroundElement,
+                              borderColor: isActive
+                                ? 'transparent'
+                                : (theme.border || 'rgba(128,128,128,0.2)'),
+                            },
+                          ]}
+                          onPress={() => setSelectedCategory(cat.id)}
+                        >
+                          <ThemedText
+                            style={[
+                              styles.categoryChipText,
+                              isActive && { color: '#FFFFFF', fontWeight: '700' },
+                            ]}
+                          >
+                            {cat.label}
+                          </ThemedText>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </ScrollView>
+                </View>
               </View>
             }
           />
@@ -311,9 +369,31 @@ const styles = StyleSheet.create({
     gap: Spacing.three,
     marginBottom: Spacing.three,
   },
-  infoContainer: {
+  headerSection: {
     marginBottom: Spacing.four,
+  },
+  infoContainer: {
+    marginBottom: Spacing.three,
     alignItems: 'center',
+  },
+  categoriesContainer: {
+    marginBottom: Spacing.two,
+  },
+  categoriesContent: {
+    gap: Spacing.two,
+    paddingHorizontal: 2,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  categoryChip: {
+    paddingHorizontal: Spacing.three,
+    paddingVertical: 6,
+    borderRadius: 20,
+    borderWidth: 1,
+  },
+  categoryChipText: {
+    fontSize: 13,
+    fontWeight: '600',
   },
   limitBadge: {
     paddingHorizontal: Spacing.three,

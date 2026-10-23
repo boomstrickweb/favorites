@@ -281,6 +281,20 @@ export const PROFILE_THEMES: ProfileTheme[] = [
     textSecondaryColor: '#FFB8D2',
   },
   {
+    id: 'halloween',
+    name: 'Haunted Night 🎃',
+    description: 'Dark purple night sky, orange moon, distant castle, flying bats & glowing embers',
+    animationLabel: 'Haunted castle, orange moon, fog, embers & flying bats',
+    primaryColor: '#FF7700',
+    secondaryColor: '#8422A7',
+    accentColor: '#FFA500',
+    bgBase: '#0D0518',
+    cardBg: 'rgba(12, 6, 20, 0.82)',
+    cardBorder: 'rgba(255, 119, 0, 0.38)',
+    textColor: '#FFFFFF',
+    textSecondaryColor: '#FFB366',
+  },
+  {
     id: 'clouds',
     name: 'Clouds',
     description: 'Slowly moving clouds',
@@ -297,6 +311,8 @@ export const PROFILE_THEMES: ProfileTheme[] = [
 ];
 
 const LEGACY_MAP: Record<string, string> = {
+  haunted_night: 'halloween',
+  spooky: 'halloween',
   cinema: 'cyberpunk',
   library: 'clouds',
   vinyl: 'particles',

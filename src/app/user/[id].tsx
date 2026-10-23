@@ -11,7 +11,7 @@ import { supabase } from '@/lib/supabase';
 import { Spacing, MaxContentWidth } from '@/constants/theme';
 import { BADGES } from '../selectbadge';
 import { UserBadge } from '@/components/user-badge';
-import { ProfileThemeBackground } from '@/components/profile-theme-background';
+import { ProfileThemeBackground, HalloweenAvatarFrame } from '@/components/profile-theme-background';
 import { getProfileTheme } from '@/constants/profile-themes';
 
 import { Gifts } from '@/components/Gifts';
@@ -551,17 +551,20 @@ export default function UserProfileScreen() {
         <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
           <View style={styles.header}>
             <View style={styles.profileInfo}>
-              <View style={[styles.avatar, { backgroundColor: cardBg, borderColor: cardBorder, borderWidth: cardBorderWidth }]}>
-                {profile.avatar_url ? (
-                  <Image source={{ uri: profile.avatar_url }} style={styles.avatarImage} />
-                ) : (
-                  <Ionicons name="person" size={40} color={profileTheme ? profileTheme.textColor : theme.textSecondary} />
-                )}
-              </View>
+              <HalloweenAvatarFrame size={80} active={profile.selected_theme === 'halloween'}>
+                <View style={[styles.avatar, { backgroundColor: cardBg, borderColor: cardBorder, borderWidth: cardBorderWidth }]}>
+                  {profile.avatar_url ? (
+                    <Image source={{ uri: profile.avatar_url }} style={styles.avatarImage} />
+                  ) : (
+                    <Ionicons name="person" size={40} color={profileTheme ? profileTheme.textColor : theme.textSecondary} />
+                  )}
+                </View>
+              </HalloweenAvatarFrame>
               <View style={styles.nameContainer}>
                 <View style={styles.usernameRow}>
                   <ThemedText type="defaultSemiBold" style={[styles.username, profileTheme && { color: profileTheme.textColor }]}>
                     {profile.full_name || profile.username}
+                    {profile.selected_theme === 'halloween' ? ' 🎃' : ''}
                   </ThemedText>
                   <UserBadge badgeId={profile.profile_badge} size={Platform.OS === 'web' ? 32 : 28} />
                 </View>

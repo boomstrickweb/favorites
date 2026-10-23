@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { StyleSheet, View, ActivityIndicator, FlatList, TouchableOpacity, Dimensions } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useTheme } from '@/hooks/use-theme';
@@ -35,36 +35,62 @@ interface GiftsProps {
   isFullScreen?: boolean;
 }
 
+export type IconFamily = 'Ionicons' | 'MaterialCommunityIcons';
+
 export interface Gift {
   id: string;
   name: string;
-  icon: keyof typeof Ionicons.glyphMap;
+  icon: string;
+  iconFamily?: IconFamily;
+  category?: 'halloween' | 'standard' | 'premium';
   isPremium: boolean;
   color: string;
   animationType: 'pulse' | 'shake' | 'float';
 }
 
+export function GiftIconDisplay({
+  icon,
+  iconFamily = 'Ionicons',
+  size = 20,
+  color,
+}: {
+  icon: string;
+  iconFamily?: IconFamily;
+  size?: number;
+  color: string;
+}) {
+  if (iconFamily === 'MaterialCommunityIcons') {
+    return <MaterialCommunityIcons name={icon as any} size={size} color={color} />;
+  }
+  return <Ionicons name={icon as any} size={size} color={color} />;
+}
+
 export const GIFTS: Gift[] = [
+  // Halloween Gifts
+  { id: 'pumpkin', name: 'Pumpkin', icon: 'pumpkin', iconFamily: 'MaterialCommunityIcons', category: 'halloween', isPremium: false, color: '#FF7518', animationType: 'pulse' },
+  { id: 'ghost', name: 'Ghost', icon: 'ghost', iconFamily: 'MaterialCommunityIcons', category: 'halloween', isPremium: false, color: '#9B51E0', animationType: 'float' },
+  { id: 'trick-or-treat-candy', name: 'Trick or Treat Candy', icon: 'candy', iconFamily: 'MaterialCommunityIcons', category: 'halloween', isPremium: false, color: '#FF9500', animationType: 'shake' },
+
   // Standard Gifts
-  { id: 'heart', name: 'Heart', icon: 'heart', isPremium: false, color: '#FF2D55', animationType: 'pulse' },
-  { id: 'thumbs-up', name: 'Thumbs Up', icon: 'thumbs-up', isPremium: false, color: '#007AFF', animationType: 'shake' },
-  { id: 'rose', name: 'Rose', icon: 'flower', isPremium: false, color: '#FF3B30', animationType: 'float' },
-  { id: 'coffee', name: 'Coffee', icon: 'cafe', isPremium: false, color: '#A2845E', animationType: 'pulse' },
-  { id: 'chocolate', name: 'Chocolate', icon: 'nutrition', isPremium: false, color: '#7B3F00', animationType: 'float' },
-  { id: 'candy', name: 'Candy', icon: 'ice-cream', isPremium: false, color: '#FF9500', animationType: 'shake' },
-  { id: 'cookie', name: 'Cookie', icon: 'disc', isPremium: false, color: '#C58C5A', animationType: 'pulse' },
-  { id: 'pizza', name: 'Pizza', icon: 'pizza', isPremium: false, color: '#FFCC00', animationType: 'float' },
+  { id: 'heart', name: 'Heart', icon: 'heart', iconFamily: 'Ionicons', category: 'standard', isPremium: false, color: '#FF2D55', animationType: 'pulse' },
+  { id: 'thumbs-up', name: 'Thumbs Up', icon: 'thumbs-up', iconFamily: 'Ionicons', category: 'standard', isPremium: false, color: '#007AFF', animationType: 'shake' },
+  { id: 'rose', name: 'Rose', icon: 'flower', iconFamily: 'Ionicons', category: 'standard', isPremium: false, color: '#FF3B30', animationType: 'float' },
+  { id: 'coffee', name: 'Coffee', icon: 'cafe', iconFamily: 'Ionicons', category: 'standard', isPremium: false, color: '#A2845E', animationType: 'pulse' },
+  { id: 'chocolate', name: 'Chocolate', icon: 'nutrition', iconFamily: 'Ionicons', category: 'standard', isPremium: false, color: '#7B3F00', animationType: 'float' },
+  { id: 'candy', name: 'Candy', icon: 'ice-cream', iconFamily: 'Ionicons', category: 'standard', isPremium: false, color: '#FF9500', animationType: 'shake' },
+  { id: 'cookie', name: 'Cookie', icon: 'disc', iconFamily: 'Ionicons', category: 'standard', isPremium: false, color: '#C58C5A', animationType: 'pulse' },
+  { id: 'pizza', name: 'Pizza', icon: 'pizza', iconFamily: 'Ionicons', category: 'standard', isPremium: false, color: '#FFCC00', animationType: 'float' },
   
   // Premium Gifts
-  { id: 'clapperboard', name: 'Clapperboard', icon: 'videocam', isPremium: true, color: '#5856D6', animationType: 'shake' },
-  { id: 'golden-book', name: 'Golden Book', icon: 'book', isPremium: true, color: '#FFD700', animationType: 'pulse' },
-  { id: 'vinyl-record', name: 'Vinyl Record', icon: 'musical-notes', isPremium: true, color: '#333333', animationType: 'float' },
-  { id: 'golden-controller', name: 'Golden Controller', icon: 'game-controller', isPremium: true, color: '#FFD700', animationType: 'shake' },
-  { id: 'car-key', name: 'Car Key', icon: 'key', isPremium: true, color: '#8E8E93', animationType: 'pulse' },
-  { id: 'golden-ball', name: 'Golden Ball', icon: 'football', isPremium: true, color: '#FFD700', animationType: 'float' },
-  { id: 'titanium-phone', name: 'Titanium Phone', icon: 'phone-portrait', isPremium: true, color: '#B4B4B4', animationType: 'pulse' },
-  { id: 'compass', name: 'Compass', icon: 'compass', isPremium: true, color: '#5AC8FA', animationType: 'shake' },
-  { id: 'chef-hat', name: 'Chef Hat', icon: 'restaurant', isPremium: true, color: '#FFFFFF', animationType: 'float' },
+  { id: 'clapperboard', name: 'Clapperboard', icon: 'videocam', iconFamily: 'Ionicons', category: 'premium', isPremium: true, color: '#5856D6', animationType: 'shake' },
+  { id: 'golden-book', name: 'Golden Book', icon: 'book', iconFamily: 'Ionicons', category: 'premium', isPremium: true, color: '#FFD700', animationType: 'pulse' },
+  { id: 'vinyl-record', name: 'Vinyl Record', icon: 'musical-notes', iconFamily: 'Ionicons', category: 'premium', isPremium: true, color: '#333333', animationType: 'float' },
+  { id: 'golden-controller', name: 'Golden Controller', icon: 'game-controller', iconFamily: 'Ionicons', category: 'premium', isPremium: true, color: '#FFD700', animationType: 'shake' },
+  { id: 'car-key', name: 'Car Key', icon: 'key', iconFamily: 'Ionicons', category: 'premium', isPremium: true, color: '#8E8E93', animationType: 'pulse' },
+  { id: 'golden-ball', name: 'Golden Ball', icon: 'football', iconFamily: 'Ionicons', category: 'premium', isPremium: true, color: '#FFD700', animationType: 'float' },
+  { id: 'titanium-phone', name: 'Titanium Phone', icon: 'phone-portrait', iconFamily: 'Ionicons', category: 'premium', isPremium: true, color: '#B4B4B4', animationType: 'pulse' },
+  { id: 'compass', name: 'Compass', icon: 'compass', iconFamily: 'Ionicons', category: 'premium', isPremium: true, color: '#5AC8FA', animationType: 'shake' },
+  { id: 'chef-hat', name: 'Chef Hat', icon: 'restaurant', iconFamily: 'Ionicons', category: 'premium', isPremium: true, color: '#FFFFFF', animationType: 'float' },
 ];
 
 export function Gifts({ userId, isFullScreen }: GiftsProps) {
@@ -132,7 +158,14 @@ export function Gifts({ userId, isFullScreen }: GiftsProps) {
     }
   };
 
-  const standardInventory = stats.filter(s => !GIFTS.find(g => g.id === s.gift_type)?.isPremium);
+  const halloweenInventory = stats.filter(s => {
+    const gift = GIFTS.find(g => g.id === s.gift_type);
+    return gift?.category === 'halloween';
+  });
+  const standardInventory = stats.filter(s => {
+    const gift = GIFTS.find(g => g.id === s.gift_type);
+    return !gift?.isPremium && gift?.category !== 'halloween';
+  });
   const premiumInventory = stats.filter(s => GIFTS.find(g => g.id === s.gift_type)?.isPremium);
 
   if (loading) {
@@ -153,11 +186,11 @@ export function Gifts({ userId, isFullScreen }: GiftsProps) {
   }
 
   const renderInventoryItem = (stat: GiftStats) => {
-    const meta = GIFTS.find(g => g.id === stat.gift_type) || { name: stat.gift_type, icon: 'gift', color: theme.brand };
+    const meta = GIFTS.find(g => g.id === stat.gift_type) || { name: stat.gift_type, icon: 'gift', iconFamily: 'Ionicons' as IconFamily, color: theme.brand };
     return (
       <View key={stat.gift_type} style={[styles.inventoryItem, { backgroundColor: theme.backgroundElement }]}>
         <View style={[styles.iconCircle, { backgroundColor: meta.color + '20' }]}>
-          <Ionicons name={meta.icon as any} size={20} color={meta.color} />
+          <GiftIconDisplay icon={meta.icon} iconFamily={meta.iconFamily} size={20} color={meta.color} />
         </View>
         <View style={styles.inventoryInfo}>
           <ThemedText style={styles.inventoryName}>{meta.name}</ThemedText>
@@ -194,6 +227,18 @@ export function Gifts({ userId, isFullScreen }: GiftsProps) {
           </View>
 
           {/* Grouped Inventory */}
+          {halloweenInventory.length > 0 && (
+            <View style={styles.section}>
+              <View style={styles.sectionHeader}>
+                <MaterialCommunityIcons name="pumpkin" size={16} color="#FF7518" />
+                <ThemedText type="defaultSemiBold" style={styles.sectionTitle}>Halloween Gifts</ThemedText>
+              </View>
+              <View style={styles.inventoryGrid}>
+                {halloweenInventory.map(renderInventoryItem)}
+              </View>
+            </View>
+          )}
+
           {premiumInventory.length > 0 && (
             <View style={styles.section}>
               <View style={styles.sectionHeader}>
@@ -222,11 +267,11 @@ export function Gifts({ userId, isFullScreen }: GiftsProps) {
         </>
       }
       renderItem={({ item }) => {
-        const meta = GIFTS.find(g => g.id === item.gift_type) || { name: item.gift_type, icon: 'gift', color: theme.brand };
+        const meta = GIFTS.find(g => g.id === item.gift_type) || { name: item.gift_type, icon: 'gift', iconFamily: 'Ionicons' as IconFamily, color: theme.brand };
         return (
           <View style={styles.historyItem}>
             <View style={[styles.historyIcon, { backgroundColor: meta.color + '15' }]}>
-              <Ionicons name={meta.icon as any} size={16} color={meta.color} />
+              <GiftIconDisplay icon={meta.icon} iconFamily={meta.iconFamily} size={16} color={meta.color} />
             </View>
             <View style={styles.historyText}>
               <ThemedText style={styles.historyMain}>
