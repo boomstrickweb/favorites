@@ -35,9 +35,8 @@ export default function ConfirmationCodeScreen() {
       if (error) throw error;
 
       if (data.user) {
-        Alert.alert('Success', 'Account confirmed!', [
-          { text: 'OK', onPress: () => router.replace('/(tabs)') }
-        ]);
+        // Redirect directly to the Feed tab
+        router.replace('/(tabs)');
       }
     } catch (error: any) {
       Alert.alert('Error', error.message || 'Verification failed');

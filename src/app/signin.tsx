@@ -15,7 +15,7 @@ import { generateSecret, encryptSecret, decryptSecret, generateRecoveryCodes, ve
 export default function SignInScreen() {
   const theme = useTheme();
   const router = useRouter();
-  const [email, setEmail] = useState('');
+  const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [show2FA, setShow2FA] = useState(false);
@@ -23,16 +23,38 @@ export default function SignInScreen() {
   const [tempUserData, setTempUserData] = useState<any>(null);
 
   const handleSignIn = async () => {
-    if (!email || !password) {
+    const trimmedIdentifier = identifier.trim();
+    if (!trimmedIdentifier || !password) {
       Alert.alert('Error', 'Please fill in all fields');
       return;
     }
 
     setLoading(true);
     try {
-      // 1. Sign in to Supabase first
+      let emailToUse = trimmedIdentifier;
+
+      // If user did not provide an email (no '@'), look up their email by username in profiles
+      if (!trimmedIdentifier.includes('@')) {
+        const { data: profile, error: profileLookupError } = await supabase
+          .from('profiles')
+          .select('email')
+          .ilike('username', trimmedIdentifier)
+          .maybeSingle();
+
+        if (profileLookupError) {
+          throw profileLookupError;
+        }
+
+        if (!profile || !profile.email) {
+          throw new Error('No account found with this username');
+        }
+
+        emailToUse = profile.email;
+      }
+
+      // 1. Sign in to Supabase
       const { data, error } = await supabase.auth.signInWithPassword({
-        email,
+        email: emailToUse,
         password,
       });
 
@@ -171,15 +193,16 @@ export default function SignInScreen() {
 
             <View style={styles.form}>
               <View style={styles.inputContainer}>
-                <ThemedText style={styles.label}>Email</ThemedText>
+                <ThemedText style={styles.label}>Email or Username</ThemedText>
                 <TextInput
                   style={[styles.input, { backgroundColor: theme.backgroundElement, color: theme.text }]}
-                  placeholder="Enter your email"
+                  placeholder="Enter your email or username"
                   placeholderTextColor={theme.textSecondary}
-                  value={email}
-                  onChangeText={setEmail}
-                  keyboardType="email-address"
+                  value={identifier}
+                  onChangeText={setIdentifier}
+                  keyboardType="default"
                   autoCapitalize="none"
+                  autoCorrect={false}
                 />
               </View>
 
