@@ -246,108 +246,6 @@ function initThemeState(themeId: string, w: number, h: number, isPreview: boolea
       }));
       return { clouds };
     }
-    case 'halloween': {
-      const emberCount = isPreview ? 14 : 32;
-      const embers = Array.from({ length: emberCount }, () => ({
-        x: Math.random() * w,
-        y: h + Math.random() * 30,
-        vx: (Math.random() - 0.5) * 16,
-        vy: -(Math.random() * 30 + 20),
-        size: Math.random() * 2.8 + 1.2,
-        life: Math.random() * 3,
-        maxLife: Math.random() * 2.5 + 2.5,
-        color: Math.random() > 0.4 ? '#FF7700' : '#FFA500',
-      }));
-
-      const fogCount = isPreview ? 3 : 6;
-      const fogs = Array.from({ length: fogCount }, (_, i) => ({
-        x: Math.random() * w,
-        y: h * (0.45 + (i / fogCount) * 0.5),
-        radiusX: (isPreview ? 110 : 240) + Math.random() * 80,
-        radiusY: (isPreview ? 35 : 70) + Math.random() * 30,
-        speed: (i % 2 === 0 ? 1 : -1) * (12 + Math.random() * 10),
-        opacity: 0.10 + Math.random() * 0.08,
-      }));
-
-      const batCount = isPreview ? 3 : 5;
-      const bats = Array.from({ length: batCount }, (_, i) => ({
-        x: -50 - Math.random() * 150 - i * 100,
-        y: h * (0.12 + Math.random() * 0.35),
-        vx: 45 + Math.random() * 35,
-        vy: (Math.random() - 0.5) * 12,
-        wingCycle: Math.random() * Math.PI * 2,
-        size: isPreview ? 8 : 14 + Math.random() * 6,
-      }));
-
-      return { embers, fogs, bats };
-    }
-    case 'pumpkin_hollow': {
-      const wispCount = isPreview ? 12 : 28;
-      const wisps = Array.from({ length: wispCount }, () => ({
-        x: Math.random() * w,
-        y: Math.random() * h,
-        vx: (Math.random() - 0.5) * 18,
-        vy: -(Math.random() * 20 + 10),
-        size: Math.random() * 3.2 + 1.2,
-        life: Math.random() * 4,
-        maxLife: Math.random() * 3 + 3,
-        color: Math.random() > 0.45 ? '#00E676' : (Math.random() > 0.5 ? '#FF6D00' : '#A855F7'),
-      }));
-
-      const ghostCount = isPreview ? 2 : 4;
-      const ghosts = Array.from({ length: ghostCount }, (_, i) => ({
-        x: (w / (ghostCount + 1)) * (i + 1) + (Math.random() * 40 - 20),
-        y: h * (0.28 + Math.random() * 0.35),
-        baseY: h * (0.28 + Math.random() * 0.35),
-        speed: (i % 2 === 0 ? 1 : -1) * (14 + Math.random() * 8),
-        size: isPreview ? 18 : 28 + Math.random() * 10,
-        bobPhase: Math.random() * Math.PI * 2,
-        driftPhase: Math.random() * Math.PI * 2,
-        alpha: 0.35 + Math.random() * 0.25,
-      }));
-
-      return { wisps, ghosts };
-    }
-    case 'cursed_crypt': {
-      const ravenCount = isPreview ? 2 : 4;
-      const ravens = Array.from({ length: ravenCount }, (_, i) => ({
-        x: -40 - Math.random() * 180 - i * 120,
-        y: h * (0.1 + Math.random() * 0.3),
-        vx: 38 + Math.random() * 30,
-        vy: (Math.random() - 0.5) * 10,
-        wingCycle: Math.random() * Math.PI * 2,
-        size: isPreview ? 7 : 12 + Math.random() * 5,
-      }));
-
-      const mistCount = isPreview ? 3 : 6;
-      const mists = Array.from({ length: mistCount }, (_, i) => ({
-        x: Math.random() * w,
-        y: h * (0.55 + (i / mistCount) * 0.4),
-        radiusX: (isPreview ? 100 : 220) + Math.random() * 80,
-        radiusY: (isPreview ? 30 : 60) + Math.random() * 25,
-        speed: (i % 2 === 0 ? 1 : -1) * (10 + Math.random() * 8),
-        opacity: 0.08 + Math.random() * 0.08,
-      }));
-
-      const fireflyCount = isPreview ? 6 : 14;
-      const fireflies = Array.from({ length: fireflyCount }, () => ({
-        x: Math.random() * w,
-        y: h * (0.6 + Math.random() * 0.35),
-        vx: (Math.random() - 0.5) * 10,
-        vy: -(Math.random() * 8 + 4),
-        size: Math.random() * 2.2 + 0.8,
-        life: Math.random() * 4,
-        maxLife: Math.random() * 3 + 3,
-      }));
-
-      return {
-        ravens,
-        mists,
-        fireflies,
-        nextLightning: 4 + Math.random() * 6,
-        lightningAlpha: 0,
-      };
-    }
     default:
       return {};
   }
@@ -1801,12 +1699,6 @@ function NativeThemeEngine({ theme, isPreview }: { theme: ProfileTheme; isPrevie
       return <NativeLavaLampAnimation isPreview={isPreview} />;
     case 'clouds':
       return <NativeCloudsAnimation isPreview={isPreview} />;
-    case 'halloween':
-      return <NativeHalloweenAnimation isPreview={isPreview} />;
-    case 'pumpkin_hollow':
-      return <NativePumpkinHollowAnimation isPreview={isPreview} />;
-    case 'cursed_crypt':
-      return <NativeCursedCryptAnimation isPreview={isPreview} />;
     default:
       return null;
   }

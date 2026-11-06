@@ -199,10 +199,9 @@ export default function SelectThemeScreen() {
             </TouchableOpacity>
           )}
 
-          {/* Halloween Tag Badge on Thumbnail */}
           {item.tag && (
             <View style={styles.thumbnailTagBadge}>
-              <ThemedText style={styles.thumbnailTagText}>🎃 {item.tag}</ThemedText>
+              <ThemedText style={styles.thumbnailTagText}>{item.tag}</ThemedText>
             </View>
           )}
 
@@ -222,8 +221,8 @@ export default function SelectThemeScreen() {
             {savingId === item.id && <ActivityIndicator size="small" color={theme.brand} />}
           </View>
           {item.tag && (
-            <View style={styles.halloweenPill}>
-              <ThemedText style={styles.halloweenPillText}>🎃 {item.tag} Theme</ThemedText>
+            <View style={styles.tagPill}>
+              <ThemedText style={styles.tagPillText}>{item.tag} Theme</ThemedText>
             </View>
           )}
           <ThemedText style={styles.themeDescription} numberOfLines={2}>
@@ -502,18 +501,18 @@ const styles = StyleSheet.create({
     opacity: 0.7,
     lineHeight: 16,
   },
-  halloweenPill: {
+  tagPill: {
     alignSelf: 'flex-start',
-    backgroundColor: 'rgba(255, 119, 0, 0.16)',
+    backgroundColor: 'rgba(99, 102, 241, 0.16)',
     borderWidth: 1,
-    borderColor: 'rgba(255, 119, 0, 0.45)',
+    borderColor: 'rgba(99, 102, 241, 0.45)',
     paddingHorizontal: 6,
     paddingVertical: 1.5,
     borderRadius: 6,
     marginBottom: 4,
   },
-  halloweenPillText: {
-    color: '#FF8800',
+  tagPillText: {
+    color: '#818CF8',
     fontSize: 10,
     fontWeight: '700',
     letterSpacing: 0.3,
