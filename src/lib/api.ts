@@ -76,7 +76,95 @@ const SPORTS_CONFIG: Record<string, { url: string; category: string }> = {
 const API_SPORTS_KEY = process.env.EXPO_PUBLIC_API_SPORTS_KEY;
 
 export async function searchSports(query: string, filter: string, entityType: string = 'all'): Promise<SearchResult[]> {
-  if (!query || !filter || filter !== 'Football') return [];
+  if (!query || !filter) return [];
+
+  if (filter === 'Basketball' || filter === 'NBA') {
+    try {
+      const results: SearchResult[] = [];
+      const seenIds = new Set<string>();
+
+      // Players search using ESPN API
+      if (entityType === 'all' || entityType === 'player') {
+        const url = `https://site.web.api.espn.com/apis/search/v2?region=us&lang=en&query=${encodeURIComponent(query)}&limit=25&type=player`;
+        console.log(`Searching Basketball Players: ${url}`);
+        const data = await fetchProxied(url);
+        if (data && data.results) {
+          data.results.forEach((resGroup: any) => {
+            if (resGroup.contents) {
+              resGroup.contents.forEach((item: any) => {
+                if (item.sport?.toLowerCase() !== 'basketball') return;
+                const id = `basketball-player-${item.id || item.uid || item.guid || Math.random().toString()}`;
+                if (!seenIds.has(id)) {
+                  seenIds.add(id);
+                  const imageUrl = item.image?.default || item.image?.defaultDark || (typeof item.image === 'string' ? item.image : undefined);
+                  const leagueOrTeam = item.subtitle || item.description;
+                  results.push({
+                    id,
+                    title: item.displayName || 'Unknown Player',
+                    subtitle: leagueOrTeam ? `Basketball - ${leagueOrTeam}` : 'Basketball Player',
+                    image: imageUrl,
+                    type: 'sport' as const,
+                    source: 'Basketball',
+                    media_type: 'player',
+                    details: {
+                      team_name: item.subtitle || item.description,
+                      league: item.defaultLeagueSlug || 'basketball',
+                      sport: item.sport || 'basketball',
+                      web_link: item.link?.web
+                    }
+                  });
+                }
+              });
+            }
+          });
+        }
+      }
+
+      // Teams search using ESPN API
+      if (entityType === 'all' || entityType === 'team') {
+        const url = `https://site.web.api.espn.com/apis/search/v2?region=us&lang=en&query=${encodeURIComponent(query)}&limit=25&type=team`;
+        console.log(`Searching Basketball Teams: ${url}`);
+        const data = await fetchProxied(url);
+        if (data && data.results) {
+          data.results.forEach((resGroup: any) => {
+            if (resGroup.contents) {
+              resGroup.contents.forEach((item: any) => {
+                if (item.sport?.toLowerCase() !== 'basketball') return;
+                const id = `basketball-team-${item.id || item.uid || item.guid || Math.random().toString()}`;
+                if (!seenIds.has(id)) {
+                  seenIds.add(id);
+                  const imageUrl = item.image?.default || item.image?.defaultDark || (typeof item.image === 'string' ? item.image : undefined);
+                  const leagueOrDesc = item.subtitle || item.description;
+                  results.push({
+                    id,
+                    title: item.displayName || 'Unknown Team',
+                    subtitle: leagueOrDesc ? `Basketball - ${leagueOrDesc}` : 'Basketball Team',
+                    image: imageUrl,
+                    type: 'sport' as const,
+                    source: 'Basketball',
+                    media_type: 'team',
+                    details: {
+                      team_name: item.displayName,
+                      league: item.defaultLeagueSlug || 'basketball',
+                      sport: item.sport || 'basketball',
+                      web_link: item.link?.web
+                    }
+                  });
+                }
+              });
+            }
+          });
+        }
+      }
+
+      return results.slice(0, 30);
+    } catch (error) {
+      console.error(`Error searching sports (${filter}):`, error);
+      return [];
+    }
+  }
+
+  if (filter !== 'Football') return [];
   
   const config = SPORTS_CONFIG[filter];
   if (!config) return [];

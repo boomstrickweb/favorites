@@ -17,7 +17,7 @@ type Category = 'movies' | 'music' | 'books' | 'sports' | 'food' | 'places' | 'v
 type VehicleFilter = 'passenger car' | 'bus' | 'mpv' | 'truck' | 'motorcycle' | 'lsv';
 type MovieFilter = 'all' | 'movie' | 'tv' | 'person';
 type MusicFilter = 'all' | 'artist' | 'album' | 'song';
-type SportsFilter = 'Football';
+type SportsFilter = 'Football' | 'Basketball';
 type FoodFilter = 'dishes' | 'drinks' | 'desserts';
 type PlacesFilter = 'countries';
 
@@ -30,7 +30,7 @@ export default function SearchScreen() {
   const [foodFilter, setFoodFilter] = useState<FoodFilter>('dishes');
   const [placesFilter, setPlacesFilter] = useState<PlacesFilter>('countries');
   const [vehicleFilter, setVehicleFilter] = useState<VehicleFilter>('passenger car');
-  const [sportsEntityFilter, setSportsEntityFilter] = useState<'team' | 'player' | 'league'>('team');
+  const [sportsEntityFilter, setSportsEntityFilter] = useState<'team' | 'player' | 'league'>('player');
   const [results, setResults] = useState<SearchResult[]>([]);
   const [loading, setLoading] = useState(false);
   const [selectedPerson, setSelectedPerson] = useState<any>(null);
@@ -1469,28 +1469,62 @@ export default function SearchScreen() {
         )}
 
         {category === 'sports' && (
-          <View style={[styles.categoryContainer, { marginTop: 0, marginBottom: 15 }]}>
-            {[
-              { id: 'team', label: 'Football Teams' },
-              { id: 'player', label: 'Football Players' },
-              { id: 'league', label: 'Football Leagues' }
-            ].map((f) => (
-              <TouchableOpacity
-                key={f.id}
-                onPress={() => setSportsEntityFilter(f.id as any)}
-                style={[
-                  styles.filterButton,
-                  sportsEntityFilter === f.id ? { backgroundColor: tintColor } : undefined
-                ].filter(Boolean) as any}
-              >
-                <ThemedText style={[
-                  styles.filterText,
-                  sportsEntityFilter === f.id && styles.activeCategoryText
-                ]}>
-                  {f.label}
-                </ThemedText>
-              </TouchableOpacity>
-            ))}
+          <View style={{ marginBottom: 15 }}>
+            <View style={[styles.categoryContainer, { marginTop: 0, marginBottom: 8 }]}>
+              {[
+                { id: 'Football', label: 'Football' },
+                { id: 'Basketball', label: 'Basketball' }
+              ].map((s) => (
+                <TouchableOpacity
+                  key={s.id}
+                  onPress={() => {
+                    const nextSport = s.id as SportsFilter;
+                    setSportsFilter(nextSport);
+                    if (nextSport === 'Basketball' && sportsEntityFilter === 'league') {
+                      setSportsEntityFilter('player');
+                    }
+                  }}
+                  style={[
+                    styles.filterButton,
+                    sportsFilter === s.id ? { backgroundColor: tintColor } : undefined
+                  ].filter(Boolean) as any}
+                >
+                  <ThemedText style={[
+                    styles.filterText,
+                    sportsFilter === s.id && styles.activeCategoryText
+                  ]}>
+                    {s.label}
+                  </ThemedText>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <View style={[styles.categoryContainer, { marginTop: 0, marginBottom: 0 }]}>
+              {(sportsFilter === 'Football' ? [
+                { id: 'player', label: 'Players' },
+                { id: 'team', label: 'Teams' },
+                { id: 'league', label: 'Leagues' }
+              ] : [
+                { id: 'player', label: 'Players' },
+                { id: 'team', label: 'Teams' }
+              ]).map((f) => (
+                <TouchableOpacity
+                  key={f.id}
+                  onPress={() => setSportsEntityFilter(f.id as any)}
+                  style={[
+                    styles.filterButton,
+                    sportsEntityFilter === f.id ? { backgroundColor: tintColor } : undefined
+                  ].filter(Boolean) as any}
+                >
+                  <ThemedText style={[
+                    styles.filterText,
+                    sportsEntityFilter === f.id && styles.activeCategoryText
+                  ]}>
+                    {f.label}
+                  </ThemedText>
+                </TouchableOpacity>
+              ))}
+            </View>
           </View>
         )}
 
@@ -1575,7 +1609,7 @@ export default function SearchScreen() {
 
         <TextInput
           style={[styles.searchInput, { backgroundColor: inputBackground, color: textColor }]}
-          placeholder={category === 'sports' ? 'Search Football...' : `Search ${category}...`}
+          placeholder={category === 'sports' ? `Search ${sportsFilter}...` : `Search ${category}...`}
           placeholderTextColor="#888"
           value={query}
           onChangeText={setQuery}
@@ -1596,7 +1630,7 @@ export default function SearchScreen() {
             query.trim() ? (
               <ThemedText style={styles.emptyText}>No results found for "{query}"</ThemedText>
             ) : (
-              <ThemedText style={styles.emptyText}>Start typing to search for {category === 'sports' ? 'Football' : category}</ThemedText>
+              <ThemedText style={styles.emptyText}>Start typing to search for {category === 'sports' ? sportsFilter : category}</ThemedText>
             )
           }
         />
