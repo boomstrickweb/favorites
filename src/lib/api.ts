@@ -69,12 +69,6 @@ export async function searchUsers(query: string): Promise<SearchResult[]> {
   }
 }
 
-const SPORTS_CONFIG: Record<string, { url: string; category: string }> = {
-  'Football': { url: 'https://apiv2.allsportsapi.com/football', category: 'football' },
-};
-
-const API_SPORTS_KEY = process.env.EXPO_PUBLIC_API_SPORTS_KEY;
-
 export async function searchSports(query: string, filter: string, entityType: string = 'all'): Promise<SearchResult[]> {
   if (!query || !filter) return [];
 
@@ -164,102 +158,130 @@ export async function searchSports(query: string, filter: string, entityType: st
     }
   }
 
-  if (filter !== 'Football') return [];
-  
-  const config = SPORTS_CONFIG[filter];
-  if (!config) return [];
+  if (filter === 'Football' || filter === 'Soccer') {
+    try {
+      const results: SearchResult[] = [];
+      const seenIds = new Set<string>();
 
-  try {
-    const results: SearchResult[] = [];
-    const seenIds = new Set<string>();
-    
-    // Players search using AllSportsAPI
-    if (entityType === 'all' || entityType === 'player') {
-      const url = `${config.url}/?&met=Players&playerName=${encodeURIComponent(query)}&APIkey=${API_SPORTS_KEY}`;
-      console.log(`Searching Football Players: ${url}`);
-      const data = await fetchProxied(url);
-      if (data && data.success === 1 && data.result) {
-        data.result.forEach((item: any) => {
-          const id = `player-${item.player_key?.toString() || Math.random().toString()}`;
-          if (!seenIds.has(id)) {
-            seenIds.add(id);
-            results.push({
-              id,
-              title: item.player_name || 'Unknown Player',
-              subtitle: item.team_name ? `Football - ${item.team_name}` : 'Football',
-              image: item.player_image,
-              type: 'sport' as const,
-              source: 'Football',
-              media_type: 'player',
-              details: {
-                age: item.player_age,
-                number: item.player_number,
-                position: item.player_type,
-                team_name: item.team_name,
-                team_key: item.team_key
-              }
-            });
-          }
-        });
-      }
-    }
-
-    // Teams and Leagues search using AllSportsAPI
-    if (entityType === 'all' || entityType === 'team') {
-      const url = `${config.url}/?&met=Teams&teamName=${encodeURIComponent(query)}&APIkey=${API_SPORTS_KEY}`;
-      console.log(`Searching Football Teams: ${url}`);
-      const data = await fetchProxied(url);
-      if (data && data.success === 1 && data.result) {
-        data.result.forEach((item: any) => {
-          const id = `team-${item.team_key?.toString() || Math.random().toString()}`;
-          if (!seenIds.has(id)) {
-            seenIds.add(id);
-            results.push({
-              id,
-              title: item.team_name || 'Unknown Team',
-              subtitle: 'Football Team',
-              image: item.team_logo,
-              type: 'sport' as const,
-              source: 'Football',
-              media_type: 'team',
-            });
-          }
-        });
-      }
-    }
-
-    if (entityType === 'all' || entityType === 'league') {
-      const url = `${config.url}/?&met=Leagues&APIkey=${API_SPORTS_KEY}`;
-      console.log(`Searching Football Leagues: ${url}`);
-      // AllSportsAPI Leagues doesn't seem to have a name filter in the basic URL, 
-      // but let's try to filter results manually or check if they support it.
-      const data = await fetchProxied(url);
-      if (data && data.success === 1 && data.result) {
-        data.result
-          .filter((item: any) => item.league_name?.toLowerCase().includes(query.toLowerCase()))
-          .forEach((item: any) => {
-            const id = `league-${item.league_key?.toString() || Math.random().toString()}`;
-            if (!seenIds.has(id)) {
-              seenIds.add(id);
-              results.push({
-                id,
-                title: item.league_name || 'Unknown League',
-                subtitle: 'Football League',
-                image: item.league_logo,
-                type: 'sport' as const,
-                source: 'Football',
-                media_type: 'league',
+      // Players search using ESPN API
+      if (entityType === 'all' || entityType === 'player') {
+        const url = `https://site.web.api.espn.com/apis/search/v2?region=us&lang=en&query=${encodeURIComponent(query)}&limit=25&type=player`;
+        console.log(`Searching Football Players: ${url}`);
+        const data = await fetchProxied(url);
+        if (data && data.results) {
+          data.results.forEach((resGroup: any) => {
+            if (resGroup.contents) {
+              resGroup.contents.forEach((item: any) => {
+                if (item.sport?.toLowerCase() !== 'soccer') return;
+                const id = `football-player-${item.id || item.uid || item.guid || Math.random().toString()}`;
+                if (!seenIds.has(id)) {
+                  seenIds.add(id);
+                  const imageUrl = item.image?.default || item.image?.defaultDark || (typeof item.image === 'string' ? item.image : undefined);
+                  const leagueOrTeam = item.subtitle || item.description;
+                  results.push({
+                    id,
+                    title: item.displayName || 'Unknown Player',
+                    subtitle: leagueOrTeam ? `Football - ${leagueOrTeam}` : 'Football Player',
+                    image: imageUrl,
+                    type: 'sport' as const,
+                    source: 'Football',
+                    media_type: 'player',
+                    details: {
+                      team_name: item.subtitle,
+                      league: item.description || item.defaultLeagueSlug,
+                      sport: item.sport || 'soccer',
+                      web_link: item.link?.web
+                    }
+                  });
+                }
               });
             }
           });
+        }
       }
-    }
 
-    return results.slice(0, 30);
-  } catch (error) {
-    console.error(`Error searching sports (${filter}):`, error);
-    return [];
+      // Teams search using ESPN API
+      if (entityType === 'all' || entityType === 'team') {
+        const url = `https://site.web.api.espn.com/apis/search/v2?region=us&lang=en&query=${encodeURIComponent(query)}&limit=25&type=team`;
+        console.log(`Searching Football Teams: ${url}`);
+        const data = await fetchProxied(url);
+        if (data && data.results) {
+          data.results.forEach((resGroup: any) => {
+            if (resGroup.contents) {
+              resGroup.contents.forEach((item: any) => {
+                if (item.sport?.toLowerCase() !== 'soccer') return;
+                const id = `football-team-${item.id || item.uid || item.guid || Math.random().toString()}`;
+                if (!seenIds.has(id)) {
+                  seenIds.add(id);
+                  const imageUrl = item.image?.default || item.image?.defaultDark || (typeof item.image === 'string' ? item.image : undefined);
+                  const leagueOrDesc = item.subtitle || item.description;
+                  results.push({
+                    id,
+                    title: item.displayName || 'Unknown Team',
+                    subtitle: leagueOrDesc ? `Football - ${leagueOrDesc}` : 'Football Team',
+                    image: imageUrl,
+                    type: 'sport' as const,
+                    source: 'Football',
+                    media_type: 'team',
+                    details: {
+                      team_name: item.displayName,
+                      league: item.subtitle || item.defaultLeagueSlug,
+                      sport: item.sport || 'soccer',
+                      web_link: item.link?.web
+                    }
+                  });
+                }
+              });
+            }
+          });
+        }
+      }
+
+      // Leagues search using ESPN API
+      if (entityType === 'all' || entityType === 'league') {
+        const url = `https://site.web.api.espn.com/apis/search/v2?region=us&lang=en&query=${encodeURIComponent(query)}&limit=25&type=league`;
+        console.log(`Searching Football Leagues: ${url}`);
+        const data = await fetchProxied(url);
+        if (data && data.results) {
+          data.results.forEach((resGroup: any) => {
+            if (resGroup.contents) {
+              resGroup.contents.forEach((item: any) => {
+                if (item.sport?.toLowerCase() !== 'soccer') return;
+                const id = `football-league-${item.id || item.uid || item.guid || Math.random().toString()}`;
+                if (!seenIds.has(id)) {
+                  seenIds.add(id);
+                  const imageUrl = item.image?.default || item.image?.defaultDark || (typeof item.image === 'string' ? item.image : undefined);
+                  const desc = item.subtitle || item.description;
+                  results.push({
+                    id,
+                    title: item.displayName || 'Unknown League',
+                    subtitle: desc ? `Football League - ${desc}` : 'Football League',
+                    image: imageUrl,
+                    type: 'sport' as const,
+                    source: 'Football',
+                    media_type: 'league',
+                    details: {
+                      league_name: item.displayName,
+                      league: item.defaultLeagueSlug,
+                      sport: item.sport || 'soccer',
+                      web_link: item.link?.web
+                    }
+                  });
+                }
+              });
+            }
+          });
+        }
+      }
+
+      return results.slice(0, 30);
+    } catch (error) {
+      console.error(`Error searching sports (${filter}):`, error);
+      return [];
+    }
   }
+
+  return [];
 }
 
 /**
