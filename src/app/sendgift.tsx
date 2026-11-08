@@ -28,7 +28,6 @@ const ITEM_SIZE = (Math.min(width, MaxContentWidth) - Spacing.four * 2 - Spacing
 
 const CATEGORIES = [
   { id: 'all', label: 'All' },
-  { id: 'halloween', label: '🎃 Halloween' },
   { id: 'standard', label: 'Standard' },
   { id: 'premium', label: '⭐ Premium' },
 ];
@@ -204,9 +203,10 @@ export default function SendGiftScreen() {
     }
   };
 
+  const sendableGifts = GIFTS.filter(g => g.category !== 'halloween');
   const filteredGifts = selectedCategory === 'all' 
-    ? GIFTS 
-    : GIFTS.filter(g => (g.category || (g.isPremium ? 'premium' : 'standard')) === selectedCategory);
+    ? sendableGifts 
+    : sendableGifts.filter(g => (g.category || (g.isPremium ? 'premium' : 'standard')) === selectedCategory);
 
   const renderGiftItem = ({ item, index }: { item: Gift; index: number }) => (
     <Animated.View 
