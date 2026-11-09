@@ -99,12 +99,17 @@ export default function CompareScreen() {
       }
     }
     if (categoryKey === 'sports_favorites') {
+      const sportName = item.category || 'Football';
+      if (item.type === 'sport') return 'Favorite Sports';
+      if (sportName === 'Racing') return 'Racing - Favorite Drivers';
+      if (sportName === 'Basketball') {
+        return item.type === 'player' ? 'Basketball - Favorite Players' : 'Basketball - Favorite Teams';
+      }
       switch (item.type) {
-        case 'sport': return 'Favorite Sports';
-        case 'team': return 'Favorite Teams';
-        case 'player': return 'Favorite Players';
-        case 'league': return 'Favorite Leagues';
-        default: return 'Sports';
+        case 'team': return 'Football - Favorite Teams';
+        case 'player': return 'Football - Favorite Players';
+        case 'league': return 'Football - Favorite Leagues';
+        default: return 'Football - Favorites';
       }
     }
     if (categoryKey === 'food_favorites') {

@@ -281,6 +281,55 @@ export async function searchSports(query: string, filter: string, entityType: st
     }
   }
 
+  if (filter === 'Racing') {
+    try {
+      const results: SearchResult[] = [];
+      const seenIds = new Set<string>();
+
+      // Drivers search using ESPN API
+      if (entityType === 'all' || entityType === 'player') {
+        const url = `https://site.web.api.espn.com/apis/search/v2?region=us&lang=en&query=${encodeURIComponent(query)}&limit=25&type=player`;
+        console.log(`Searching Racing Drivers: ${url}`);
+        const data = await fetchProxied(url);
+        if (data && data.results) {
+          data.results.forEach((resGroup: any) => {
+            if (resGroup.contents) {
+              resGroup.contents.forEach((item: any) => {
+                if (item.sport?.toLowerCase() !== 'racing') return;
+                const id = `racing-player-${item.id || item.uid || item.guid || Math.random().toString()}`;
+                if (!seenIds.has(id)) {
+                  seenIds.add(id);
+                  const imageUrl = item.image?.default || item.image?.defaultDark || (typeof item.image === 'string' ? item.image : undefined);
+                  const desc = item.subtitle || item.description;
+                  results.push({
+                    id,
+                    title: item.displayName || 'Unknown Driver',
+                    subtitle: desc ? `Racing - ${desc}` : 'Racing Driver',
+                    image: imageUrl,
+                    type: 'sport' as const,
+                    source: 'Racing',
+                    media_type: 'player',
+                    details: {
+                      team_name: item.subtitle,
+                      league: item.description || item.defaultLeagueSlug,
+                      sport: item.sport || 'racing',
+                      web_link: item.link?.web
+                    }
+                  });
+                }
+              });
+            }
+          });
+        }
+      }
+
+      return results.slice(0, 30);
+    } catch (error) {
+      console.error(`Error searching sports (${filter}):`, error);
+      return [];
+    }
+  }
+
   return [];
 }
 
@@ -937,6 +986,9 @@ export async function getUserFavorites(userId: string): Promise<Record<string, {
         selectColumns.push('category');
       } else if (table === 'food_favorites' || table === 'places_favorites' || table === 'sports_favorites' || table === 'vehicle_favorites' || table === 'games_favorites') {
         selectColumns.push('type');
+        if (table === 'sports_favorites') {
+          selectColumns.push('metadata');
+        }
       }
 
       const { data, error } = await supabase
@@ -951,7 +1003,7 @@ export async function getUserFavorites(userId: string): Promise<Record<string, {
         favorites[table] = (data || []).map((item: any) => ({
           value: item[valueColumn],
           type: item.type,
-          category: item.category
+          category: table === 'sports_favorites' ? (item.metadata?.sport || item.metadata?.category || (item.type === 'sport' ? undefined : 'Football')) : item.category
         }));
       }
     }

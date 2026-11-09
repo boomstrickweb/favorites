@@ -17,7 +17,7 @@ type Category = 'movies' | 'music' | 'books' | 'sports' | 'food' | 'places' | 'v
 type VehicleFilter = 'passenger car' | 'bus' | 'mpv' | 'truck' | 'motorcycle' | 'lsv';
 type MovieFilter = 'all' | 'movie' | 'tv' | 'person';
 type MusicFilter = 'all' | 'artist' | 'album' | 'song';
-type SportsFilter = 'Football' | 'Basketball';
+type SportsFilter = 'Football' | 'Basketball' | 'Racing';
 type FoodFilter = 'dishes' | 'drinks' | 'desserts';
 type PlacesFilter = 'countries';
 
@@ -1111,6 +1111,7 @@ export default function SearchScreen() {
         setIsFavorite(false);
         Alert.alert('Success', `${item.title} removed from favorites`);
       } else {
+        const sportName = item.source || (item.details?.sport ? (item.details.sport === 'soccer' ? 'Football' : item.details.sport.charAt(0).toUpperCase() + item.details.sport.slice(1)) : 'Football');
         const { error } = await supabase
           .from('sports_favorites')
           .insert({
@@ -1119,9 +1120,11 @@ export default function SearchScreen() {
             item_id: item.title,
             metadata: {
               image: item.image,
-              sport: item.source,
+              sport: sportName,
+              category: sportName,
               api_sports_id: item.id,
-              subtitle: item.subtitle
+              subtitle: item.subtitle,
+              details: item.details
             }
           });
         
@@ -1473,14 +1476,17 @@ export default function SearchScreen() {
             <View style={[styles.categoryContainer, { marginTop: 0, marginBottom: 8 }]}>
               {[
                 { id: 'Football', label: 'Football' },
-                { id: 'Basketball', label: 'Basketball' }
+                { id: 'Basketball', label: 'Basketball' },
+                { id: 'Racing', label: 'Racing' }
               ].map((s) => (
                 <TouchableOpacity
                   key={s.id}
                   onPress={() => {
                     const nextSport = s.id as SportsFilter;
                     setSportsFilter(nextSport);
-                    if (nextSport === 'Basketball' && sportsEntityFilter === 'league') {
+                    if (nextSport === 'Racing') {
+                      setSportsEntityFilter('player');
+                    } else if (nextSport === 'Basketball' && sportsEntityFilter === 'league') {
                       setSportsEntityFilter('player');
                     }
                   }}
@@ -1504,9 +1510,11 @@ export default function SearchScreen() {
                 { id: 'player', label: 'Players' },
                 { id: 'team', label: 'Teams' },
                 { id: 'league', label: 'Leagues' }
-              ] : [
+              ] : sportsFilter === 'Basketball' ? [
                 { id: 'player', label: 'Players' },
                 { id: 'team', label: 'Teams' }
+              ] : [
+                { id: 'player', label: 'Drivers' }
               ]).map((f) => (
                 <TouchableOpacity
                   key={f.id}
@@ -2516,7 +2524,9 @@ export default function SearchScreen() {
                       <ThemedText style={styles.metaText}>{selectedSportItem.source}</ThemedText>
                       
                       <ThemedText type="defaultSemiBold" style={[styles.metaLabel, { color: tintColor }]}>Type</ThemedText>
-                      <ThemedText style={styles.metaText}>{selectedSportItem.media_type}</ThemedText>
+                      <ThemedText style={styles.metaText}>
+                        {selectedSportItem.source === 'Racing' && selectedSportItem.media_type === 'player' ? 'Driver' : (selectedSportItem.media_type ? selectedSportItem.media_type.charAt(0).toUpperCase() + selectedSportItem.media_type.slice(1) : '')}
+                      </ThemedText>
                     </View>
                   </View>
 
@@ -2524,26 +2534,40 @@ export default function SearchScreen() {
                     <ThemedText type="defaultSemiBold" style={{ marginTop: Spacing.four, color: tintColor }}>Details</ThemedText>
                     {selectedSportItem.media_type === 'player' && selectedSportItem.details ? (
                       <View style={{ gap: Spacing.two }}>
-                        <View style={styles.detailRow}>
-                          <ThemedText type="defaultSemiBold" style={{ color: tintColor }}>Team: </ThemedText>
-                          <ThemedText style={styles.bioText}>{selectedSportItem.details.team_name || 'N/A'}</ThemedText>
-                        </View>
-                        <View style={styles.detailRow}>
-                          <ThemedText type="defaultSemiBold" style={{ color: tintColor }}>Position: </ThemedText>
-                          <ThemedText style={styles.bioText}>{selectedSportItem.details.position || 'N/A'}</ThemedText>
-                        </View>
-                        <View style={styles.detailRow}>
-                          <ThemedText type="defaultSemiBold" style={{ color: tintColor }}>Age: </ThemedText>
-                          <ThemedText style={styles.bioText}>{selectedSportItem.details.age || 'N/A'}</ThemedText>
-                        </View>
-                        <View style={styles.detailRow}>
-                          <ThemedText type="defaultSemiBold" style={{ color: tintColor }}>Number: </ThemedText>
-                          <ThemedText style={styles.bioText}>{selectedSportItem.details.number || 'N/A'}</ThemedText>
-                        </View>
+                        {selectedSportItem.details.team_name ? (
+                          <View style={styles.detailRow}>
+                            <ThemedText type="defaultSemiBold" style={{ color: tintColor }}>{selectedSportItem.source === 'Racing' ? 'Team: ' : 'Team: '}</ThemedText>
+                            <ThemedText style={styles.bioText}>{selectedSportItem.details.team_name}</ThemedText>
+                          </View>
+                        ) : null}
+                        {selectedSportItem.details.league ? (
+                          <View style={styles.detailRow}>
+                            <ThemedText type="defaultSemiBold" style={{ color: tintColor }}>{selectedSportItem.source === 'Racing' ? 'Series: ' : 'League: '}</ThemedText>
+                            <ThemedText style={styles.bioText}>{selectedSportItem.details.league}</ThemedText>
+                          </View>
+                        ) : null}
+                        {selectedSportItem.details.position ? (
+                          <View style={styles.detailRow}>
+                            <ThemedText type="defaultSemiBold" style={{ color: tintColor }}>Position: </ThemedText>
+                            <ThemedText style={styles.bioText}>{selectedSportItem.details.position}</ThemedText>
+                          </View>
+                        ) : null}
+                        {selectedSportItem.details.age ? (
+                          <View style={styles.detailRow}>
+                            <ThemedText type="defaultSemiBold" style={{ color: tintColor }}>Age: </ThemedText>
+                            <ThemedText style={styles.bioText}>{selectedSportItem.details.age}</ThemedText>
+                          </View>
+                        ) : null}
+                        {selectedSportItem.details.number ? (
+                          <View style={styles.detailRow}>
+                            <ThemedText type="defaultSemiBold" style={{ color: tintColor }}>Number: </ThemedText>
+                            <ThemedText style={styles.bioText}>{selectedSportItem.details.number}</ThemedText>
+                          </View>
+                        ) : null}
                       </View>
                     ) : (
                       <ThemedText style={styles.bioText}>
-                        This is a {selectedSportItem.media_type} from {selectedSportItem.source}. 
+                        This is a {selectedSportItem.source === 'Racing' && selectedSportItem.media_type === 'player' ? 'driver' : selectedSportItem.media_type} from {selectedSportItem.source}. 
                         Add it to your favorites to keep track of it!
                       </ThemedText>
                     )}
